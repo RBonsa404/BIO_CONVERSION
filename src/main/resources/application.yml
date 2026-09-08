@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: bioconversion-backend
+
+  profiles:
+    active: dev
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: public
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+logging:
+  level:
+    com.bioconversion: INFO
+    org.springframework.security: WARN
+    org.flywaydb: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+  show-actuator: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:changeme-at-least-256-bits-long-for-hs256-algorithm-!!}
+    expiration-ms: 86400000
+  security:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:8080
+  upload:
+    identite-dir: ${UPLOAD_DIR:./uploads/identites}
