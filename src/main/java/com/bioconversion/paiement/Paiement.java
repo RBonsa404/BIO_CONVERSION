@@ -66,6 +66,10 @@ public class Paiement {
     @Column(name = "operateur", nullable = false, length = 100)
     private String operateur;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
     /** Référence de transaction retournée par l'API Orange Money. */
     @Column(name = "reference_transaction", length = 255)
     private String referenceTransaction;
@@ -83,6 +87,30 @@ public class Paiement {
      */
     @OneToOne(mappedBy = "paiement", cascade = CascadeType.ALL, orphanRemoval = true)
     private Facture facture;
+        /**
+     * C-MUST-1 : initie la transaction auprès de l'opérateur avant validation de la commande.
+     * TODO Module C : intégration API Orange Money — SIMULÉE pour l'instant.
+     */
+    public void effectuerPaiement() {
+        this.datePaiement = OffsetDateTime.now();
+        this.statutPaiement = StatutPaiement.EN_ATTENTE;
+    }
+
+    /**
+     * C-MUST-2/C-MUST-3 : appelée par le webhook de confirmation de l'opérateur.
+     */
+    public void confirmerPaiement(String referenceTransactionOperateur) {
+        this.referenceTransaction = referenceTransactionOperateur;
+        this.datePaiement = OffsetDateTime.now();
+        this.statutPaiement = StatutPaiement.CONFIRME;
+    }
+
+    /**
+     * Cas limite CDC 2.3.2 : échec ou expiration de la transaction Orange Money.
+     */
+    public void annulerPaiement() {
+        this.statutPaiement = StatutPaiement.ECHOUE;
+    }
 
     public Long getId() {
         return idPaiement;
