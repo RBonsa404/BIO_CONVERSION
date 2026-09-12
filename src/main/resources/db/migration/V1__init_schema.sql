@@ -7,7 +7,8 @@ CREATE TYPE statut_utilisateur_enum AS ENUM (
 CREATE TYPE statut_commande_enum AS ENUM (
     'EN_ATTENTE',
     'CONFIRME',
-    'EN_LIVRAISON',
+    'REFUSE',
+    'EXPEDIE',
     'LIVRE',
     'ANNULE'
 );
