@@ -11,14 +11,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * Implémentation du service métier Module C — Paiement Intégré (Orange Money).
+ * CDC v1.1, C-MUST-1 à C-MUST-4.
+ */
 @Service
 @RequiredArgsConstructor
 public class PaiementServiceImpl implements PaiementService {
 
-    // Lecture seule de Commande (Module B) — on ne modifie jamais leurs fichiers source,
-    // seulement l'état via les setters déjà exposés par leur entité.
+    // Lecture seule de Commande (Module B) — on ne modifie jamais leurs fichiers
+    // source, seulement l'état via les setters déjà exposés par leur entité.
     private final CommandeRepository commandeRepository;
     private final PaiementRepository paiementRepository;
+    private final FactureService factureService;
 
     @Override
     @Transactional
@@ -47,8 +52,9 @@ public class PaiementServiceImpl implements PaiementService {
                 .statutPaiement(StatutPaiement.EN_ATTENTE)
                 .build();
 
-        // C-MUST-1 : intégration réelle Orange Money SIMULÉE pour l'instant (cf. dispatch 3.1).
-        // La confirmation/échec arrive de façon asynchrone via POST /paiements/webhook.
+        // C-MUST-1 : intégration réelle Orange Money SIMULÉE pour l'instant
+        // (cf. dispatch §3.1). La confirmation/échec arrive de façon asynchrone
+        // via POST /api/v1/paiements/webhook.
 
         return paiementRepository.save(paiement);
     }
@@ -58,7 +64,8 @@ public class PaiementServiceImpl implements PaiementService {
     public Paiement traiterWebhookSucces(String referenceTransaction) {
         Paiement paiement = trouverParReference(referenceTransaction);
 
-        // Idempotence : un webhook déjà traité ne doit pas re-déclencher les effets de bord.
+        // Idempotence : un webhook déjà traité ne doit pas re-déclencher les
+        // effets de bord (notification, génération de facture en double).
         if (paiement.getStatutPaiement() == StatutPaiement.CONFIRME) {
             return paiement;
         }
@@ -66,15 +73,20 @@ public class PaiementServiceImpl implements PaiementService {
         paiement.confirmerPaiement(referenceTransaction);
         paiement = paiementRepository.save(paiement);
 
-        // TODO C-MUST-2 : notifier éleveur + producteur < 10s. Canal (SMS/WhatsApp) et
-        // responsabilité exacte à clarifier avec Module D (dispatch §6 point 1 — AlerteIoT
-        // reste dédiée aux capteurs d'après ZAREI Seybou). Non implémenté ici tant que ce
-        // n'est pas tranché.
+        // C-MUST-5 : génération automatique de la facture après confirmation
+        // (diagramme de séquence "Validation et paiement", étape 7).
+        factureService.genererPourPaiement(paiement);
 
-        // TODO : mise à jour Commande.statut = PAYÉ (diagramme de séquence, étape 7).
-        // BLOQUANT : StatutCommande (Module B) n'a pas de valeur PAYE — nécessite l'accord
-        // inter-binômes sur le contrat de statut commun (dispatch §6 point 4) avant
-        // d'écrire commande.setStatut(...). Ne pas deviner un mapping ici.
+        // TODO C-MUST-2 : notifier éleveur + producteur < 10s. Canal
+        // (SMS/WhatsApp) et responsabilité exacte à clarifier avec Module D
+        // (dispatch §6 point 1 — AlerteIoT reste dédiée aux capteurs d'après
+        // ZAREI Seybou). Non implémenté ici tant que ce n'est pas tranché.
+
+        // TODO : mise à jour Commande.statut = PAYÉ (diagramme de séquence,
+        // étape 7). BLOQUANT : StatutCommande (Module B) n'a pas de valeur
+        // PAYE — nécessite l'accord inter-binômes sur le contrat de statut
+        // commun (dispatch §6 point 4) avant d'écrire commande.setStatut(...).
+        // Ne pas deviner un mapping ici.
 
         return paiement;
     }
@@ -88,8 +100,8 @@ public class PaiementServiceImpl implements PaiementService {
             return paiement;
         }
 
-        // Cas limite CDC 2.3.2 : la commande NE DOIT PAS être confirmée. On ne touche donc
-        // pas à Commande.statut ici, uniquement à Paiement.
+        // Cas limite CDC 2.3.2 : la commande NE DOIT PAS être confirmée. On ne
+        // touche donc pas à Commande.statut ici, uniquement à Paiement.
         paiement.annulerPaiement();
 
         return paiementRepository.save(paiement);
