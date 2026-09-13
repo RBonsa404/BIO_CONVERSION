@@ -42,3 +42,5 @@ application-prod-secrets.yml
 
 CLAUDE.md
 .claude/
+factures/
+diff.txt

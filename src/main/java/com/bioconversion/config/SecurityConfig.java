@@ -65,9 +65,11 @@ public class SecurityConfig {
 
                         // ── Endpoints publics ──────────────────────────────
                         .requestMatchers(HttpMethod.POST,
-                                "/api/auth/inscription",
-                                "/api/auth/connexion")
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/login")
                         .permitAll()
+
+                        .requestMatchers("/api/v1/factures/**").hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
 
                         // Swagger / OpenAPI (désactiver en prod si nécessaire)
                         .requestMatchers(
@@ -78,27 +80,27 @@ public class SecurityConfig {
 
                         // ── Module A — IoT ────────────────────────────────
                         // TODO (Module A) : affiner les permissions par endpoint
-                        .requestMatchers("/api/iot/**")
+                        .requestMatchers("/api/v1/iot/**")
                         .hasAnyRole("PRODUCTEUR", "ADMINISTRATEUR")
 
                         // ── Module B — Marketplace ────────────────────────
                         // TODO (Module B) : affiner les permissions
-                        .requestMatchers("/api/produits/**")
+                        .requestMatchers("/api/v1/produits/**")
                         .hasAnyRole("PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR")
-                        .requestMatchers("/api/commandes/**")
+                        .requestMatchers("/api/v1/commandes/**")
                         .hasAnyRole("PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR")
 
                         // ── Module C — Paiement ───────────────────────────
                         // TODO (Module C) : affiner les permissions
-                        .requestMatchers("/api/paiements/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/paiements/webhook").permitAll()
+                        .requestMatchers("/api/v1/paiements/**").hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
 
                         // ── Administration ────────────────────────────────
                         .requestMatchers("/api/admin/**")
                         .hasAnyRole("ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
 
                         // ── Profil utilisateur ────────────────────────────
-                        .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers("/api/v1/auth/**").authenticated()
 
                         // Tout le reste exige une authentification
                         .anyRequest().authenticated())

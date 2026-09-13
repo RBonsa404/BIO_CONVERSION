@@ -8,6 +8,7 @@ import com.lowagie.text.DocumentException;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,8 +17,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.UUID;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import java.awt.Color;
+import com.lowagie.text.*;
 
 /**
  * Implémentation du service métier Module C — Facturation.
@@ -25,7 +32,10 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FactureServiceImpl implements FactureService {
+
+    private static final String DOSSIER_FACTURES = "factures";
 
     private final FactureRepository factureRepository;
     private final AppProperties appProperties;
@@ -67,36 +77,167 @@ public class FactureServiceImpl implements FactureService {
     }
 
     private String genererPdf(Facture facture, double montantCommission, double tauxCommission) {
-        try {
-            Path dossier = Path.of("./factures");
-            Files.createDirectories(dossier);
+    try {
+        Files.createDirectories(Paths.get(DOSSIER_FACTURES));
 
-            Path fichier = dossier.resolve(facture.getReference() + ".pdf");
+        String nomFichier = facture.getReference() + ".pdf";
+        Path chemin = Paths.get(DOSSIER_FACTURES, nomFichier);
 
-            Document document = new Document();
-            try (FileOutputStream out = new FileOutputStream(fichier.toFile())) {
-                PdfWriter.getInstance(document, out);
-                document.open();
+        Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+        try (var out = Files.newOutputStream(chemin)) {
+            PdfWriter.getInstance(document, out);
+            document.open();
 
-                document.add(new Paragraph("BIO CONVERSION — Facture"));
-                document.add(new Paragraph("Référence : " + facture.getReference()));
-                document.add(new Paragraph("Date : " + facture.getDateFacture()));
-                document.add(new Paragraph("Commande : "
-                        + facture.getPaiement().getCommande().getNumeroCommande()));
-                document.add(new Paragraph("Montant payé : " + facture.getMontant() + " FCFA"));
-                document.add(new Paragraph(String.format(
-                        "Commission plateforme (%.2f%%) : %.2f FCFA",
-                        tauxCommission * 100, montantCommission)));
+            // Couleurs de la charte (sobre, cf. CDC §4.4)
+            Color vertPrincipal = new Color(46, 125, 50);
+            Color grisTexte = new Color(60, 60, 60);
+            Color grisClair = new Color(240, 240, 240);
 
-                document.close();
-            }
+            Font policeTitre = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, vertPrincipal);
+            Font policeSousTitre = FontFactory.getFont(FontFactory.HELVETICA, 10, grisTexte);
+            Font policeLabel = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, grisTexte);
+            Font policeValeur = FontFactory.getFont(FontFactory.HELVETICA, 10, grisTexte);
+            Font policeTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, vertPrincipal);
 
-            return fichier.toString();
-        } catch (IOException | DocumentException e) {
-            throw new RuntimeException(
-                    "Impossible de générer le PDF de la facture " + facture.getReference(), e);
+            // En-tête
+            Paragraph titre = new Paragraph("BIO CONVERSION", policeTitre);
+            titre.setAlignment(Element.ALIGN_LEFT);
+            document.add(titre);
+
+            Paragraph sousTitre = new Paragraph(
+                    "Plateforme numérique de bio-conversion — Burkina Faso", policeSousTitre);
+            sousTitre.setSpacingAfter(20);
+            document.add(sousTitre);
+
+            // Ligne de séparation
+            document.add(ligneSeparatrice(vertPrincipal));
+            document.add(new Paragraph(" "));
+
+            // Titre du document
+            Paragraph libelle = new Paragraph("FACTURE",
+                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, grisTexte));
+            libelle.setSpacingAfter(15);
+            document.add(libelle);
+
+            // Bloc infos (référence / date / commande)
+            PdfPTable infos = new PdfPTable(2);
+            infos.setWidthPercentage(100);
+            infos.setSpacingAfter(20);
+            infos.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+
+            ajouterLigneInfo(infos, "Référence", facture.getReference(), policeLabel, policeValeur);
+            ajouterLigneInfo(infos, "Date", facture.getDateFacture().toString(), policeLabel, policeValeur);
+            ajouterLigneInfo(infos, "Commande n°",
+                    facture.getPaiement().getCommande().getNumeroCommande(), policeLabel, policeValeur);
+            ajouterLigneInfo(infos, "Opérateur de paiement",
+                    facture.getPaiement().getOperateur(), policeLabel, policeValeur);
+            document.add(infos);
+
+            // Tableau du détail financier
+            PdfPTable detail = new PdfPTable(2);
+            detail.setWidthPercentage(100);
+            detail.setWidths(new float[]{3, 1});
+            detail.setSpacingAfter(10);
+
+            ajouterEnteteTableau(detail, "Description", grisClair, policeLabel);
+            ajouterEnteteTableau(detail, "Montant (FCFA)", grisClair, policeLabel);
+
+            ajouterLigneTableau(detail, "Montant payé par l'éleveur",
+                    String.format(Locale.FRANCE, "%,.0f", facture.getMontant()), policeValeur);
+            ajouterLigneTableau(detail,
+                    String.format(Locale.FRANCE, "Commission plateforme (%.1f%%)", tauxCommission * 100),
+                    String.format(Locale.FRANCE, "%,.0f", montantCommission), policeValeur);
+
+            document.add(detail);
+
+            // Ligne total
+            PdfPTable total = new PdfPTable(2);
+            total.setWidthPercentage(100);
+            total.setWidths(new float[]{3, 1});
+
+            PdfPCell celluleTotalLabel = new PdfPCell(new Phrase("Total payé", policeTotal));
+            celluleTotalLabel.setBorder(Rectangle.TOP);
+            celluleTotalLabel.setBorderColor(vertPrincipal);
+            celluleTotalLabel.setPaddingTop(8);
+
+            PdfPCell celluleTotalValeur = new PdfPCell(new Phrase(
+                    String.format(Locale.FRANCE, "%,.0f FCFA", facture.getMontant()), policeTotal));
+            celluleTotalValeur.setBorder(Rectangle.TOP);
+            celluleTotalValeur.setBorderColor(vertPrincipal);
+            celluleTotalValeur.setPaddingTop(8);
+            celluleTotalValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+            total.addCell(celluleTotalLabel);
+            total.addCell(celluleTotalValeur);
+            document.add(total);
+
+            // Pied de page
+            Paragraph piedDePage = new Paragraph(
+                    "\n\nFacture générée automatiquement — Bio Conversion, Ouagadougou, Burkina Faso",
+                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.GRAY));
+            piedDePage.setAlignment(Element.ALIGN_CENTER);
+            piedDePage.setSpacingBefore(40);
+            document.add(piedDePage);
+
+            document.close();
         }
+
+        return chemin.toString();
+
+    } catch (IOException | DocumentException e) {
+        log.error("Échec de génération du PDF pour la facture {}", facture.getReference(), e);
+        throw new UncheckedIOException(
+                "Impossible de générer le PDF de la facture " + facture.getReference(),
+                e instanceof IOException ioEx ? ioEx : new IOException(e));
     }
+}
+
+private PdfPTable ligneSeparatrice(Color couleur) {
+    PdfPTable table = new PdfPTable(1);
+    table.setWidthPercentage(100);
+    PdfPCell cellule = new PdfPCell();
+    cellule.setBorder(Rectangle.BOTTOM);
+    cellule.setBorderColor(couleur);
+    cellule.setBorderWidth(2);
+    cellule.setFixedHeight(2);
+    table.addCell(cellule);
+    return table;
+}
+
+private void ajouterLigneInfo(PdfPTable table, String label, String valeur, Font policeLabel, Font policeValeur) {
+    PdfPCell celluleLabel = new PdfPCell(new Phrase(label, policeLabel));
+    celluleLabel.setBorder(Rectangle.NO_BORDER);
+    celluleLabel.setPaddingBottom(4);
+
+    PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, policeValeur));
+    celluleValeur.setBorder(Rectangle.NO_BORDER);
+    celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
+    celluleValeur.setPaddingBottom(4);
+
+    table.addCell(celluleLabel);
+    table.addCell(celluleValeur);
+}
+
+private void ajouterEnteteTableau(PdfPTable table, String texte, Color fond, Font police) {
+    PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
+    cellule.setBackgroundColor(fond);
+    cellule.setPadding(8);
+    table.addCell(cellule);
+}
+
+private void ajouterLigneTableau(PdfPTable table, String label, String valeur, Font police) {
+    PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
+    celluleLabel.setPadding(8);
+    celluleLabel.setBorderColor(Color.LIGHT_GRAY);
+
+    PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, police));
+    celluleValeur.setPadding(8);
+    celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
+    celluleValeur.setBorderColor(Color.LIGHT_GRAY);
+
+    table.addCell(celluleLabel);
+    table.addCell(celluleValeur);
+}
 
     @Override
     public Facture consulterParReference(String reference) {
