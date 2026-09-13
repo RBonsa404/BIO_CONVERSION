@@ -13,3 +13,8 @@ logging:
     com.bioconversion: DEBUG
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
+
+
+app:
+  commission:
+    taux: 0.05  # 5% — valeur à confirmer avec la MOA (CDC §2.2.3, C-MUST-5)

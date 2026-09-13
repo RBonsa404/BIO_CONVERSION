@@ -36,7 +36,9 @@ public record AppProperties(
 
                 SecurityProperties security,
 
-                UploadProperties upload
+                UploadProperties upload,
+
+                @NotNull @Valid CommissionProperties commission
 
 ) {
 
@@ -51,5 +53,14 @@ public record AppProperties(
 
         public record UploadProperties(
                         String identiteDir) {
+        }
+
+        /**
+         * C-MUST-5 (CDC v1.1) : taux de commission perçu par la plateforme sur
+         * chaque transaction. Paramétrable côté administration, jamais codé en dur
+         * dans FactureService.
+         */
+        public record CommissionProperties(
+                        @Positive double taux) {
         }
 }
