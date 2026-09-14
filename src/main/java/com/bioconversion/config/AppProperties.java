@@ -36,7 +36,9 @@ public record AppProperties(
 
                 SecurityProperties security,
 
-                UploadProperties upload
+                UploadProperties upload,
+
+                CommissionProperties commission
 
 ) {
 
@@ -51,5 +53,9 @@ public record AppProperties(
 
         public record UploadProperties(
                         String identiteDir) {
+        }
+
+        public record CommissionProperties(
+                        double taux) {
         }
 }

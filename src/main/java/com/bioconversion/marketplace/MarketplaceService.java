@@ -8,13 +8,13 @@ import org.springframework.data.domain.Pageable;
  *
  * <p>Définit le contrat d'interface pour le catalogue produits et la gestion des commandes (CDC §2.2.2).</p>
  */
-public interface MarketplaceService {
+public interface MarketplaceService extends CommandeService {
 
     Page<Produit> listerProduitsDisponibles(Pageable pageable);
 
     Produit ajouterProduit(Produit produit, Long producteurId);
 
-    Commande passerCommande(Long eleveurId, Long produitId, Integer quantite);
+    Commande passerCommande(Long eleveurId, Long produitId, Double quantite);
 
     Commande changerStatutCommande(Long commandeId, StatutCommande nouveauStatut);
 }
