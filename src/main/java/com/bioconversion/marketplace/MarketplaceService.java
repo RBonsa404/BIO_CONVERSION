@@ -2,6 +2,7 @@ package com.bioconversion.marketplace;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.List;
 
 /**
  * Interface de service pour le Module B — Marketplace d'Engrais & Larves.
@@ -17,4 +18,11 @@ public interface MarketplaceService {
     Commande passerCommande(Long eleveurId, Long produitId, Integer quantite);
 
     Commande changerStatutCommande(Long commandeId, StatutCommande nouveauStatut);
+
+    Produit publierProduit(Produit produit, Long producteurId);
+    Produit modifierStock(Long produitId, double nouvelleQuantite);
+    Produit modifierPrix(Long produitId, double nouveauPrix);
+    void retirerProduit(Long produitId);
+    List<Produit> consulterCatalogueProducteur(Long producteurId);
 }
+

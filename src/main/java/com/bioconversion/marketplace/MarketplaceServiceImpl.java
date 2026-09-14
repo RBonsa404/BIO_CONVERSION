@@ -1,5 +1,10 @@
 package com.bioconversion.marketplace;
 
+import com.bioconversion.common.exception.ResourceNotFoundException;
+import com.bioconversion.utilisateur.Producteur;
+import com.bioconversion.utilisateur.ProducteurRepository;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +19,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
 
     private final ProduitRepository produitRepository;
     private final CommandeRepository commandeRepository;
+    private final ProducteurRepository producteurRepository;
 
     @Override
     public Page<Produit> listerProduitsDisponibles(Pageable pageable) {
@@ -37,4 +43,43 @@ public class MarketplaceServiceImpl implements MarketplaceService {
         // TODO: Gérer la transition d'état du cycle de vie de la commande
         return null;
     }
+    
+    @Override
+    public Produit publierProduit(Produit produit, Long producteurId) {
+        Producteur producteur = producteurRepository.findById(producteurId)
+                .orElseThrow(() -> new ResourceNotFoundException("Producteur introuvable"));
+        produit.setProducteur(producteur);
+        produit.setDisponibilite(true);
+        return produitRepository.save(produit);
+    }
+
+    @Override
+    public Produit modifierStock(Long produitId, double nouvelleQuantite) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
+        produit.setQuantiteStock(nouvelleQuantite);
+        return produitRepository.save(produit);
+    }
+
+    @Override
+    public Produit modifierPrix(Long produitId, double nouveauPrix) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
+        produit.setPrix(nouveauPrix);
+        return produitRepository.save(produit);
+    }
+
+    @Override
+    public void retirerProduit(Long produitId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable"));
+        produit.setDisponibilite(false);
+        produitRepository.save(produit);
+    }
+
+    @Override
+    public List<Produit> consulterCatalogueProducteur(Long producteurId) {
+        return produitRepository.findByProducteurIdUtilisateur(producteurId);
+    }
+
 }
