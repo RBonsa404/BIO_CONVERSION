@@ -24,5 +24,8 @@ public interface MarketplaceService {
     Produit modifierPrix(Long produitId, double nouveauPrix);
     void retirerProduit(Long produitId);
     List<Produit> consulterCatalogueProducteur(Long producteurId);
+
+    List<Produit> rechercherProduitsParRayon(double latitude, double longitude, double rayonKm);
+
 }
 

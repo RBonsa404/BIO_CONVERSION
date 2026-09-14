@@ -4,6 +4,8 @@ import com.bioconversion.common.exception.ResourceNotFoundException;
 import com.bioconversion.utilisateur.Producteur;
 import com.bioconversion.utilisateur.ProducteurRepository;
 import java.util.List;
+import com.bioconversion.geo.Localisation;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,7 +45,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
         // TODO: Gérer la transition d'état du cycle de vie de la commande
         return null;
     }
-    
+
     @Override
     public Produit publierProduit(Produit produit, Long producteurId) {
         Producteur producteur = producteurRepository.findById(producteurId)
@@ -80,6 +82,19 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     @Override
     public List<Produit> consulterCatalogueProducteur(Long producteurId) {
         return produitRepository.findByProducteurIdUtilisateur(producteurId);
+    }
+ @Override
+    public List<Produit> rechercherProduitsParRayon(double latitude, double longitude, double rayonKm) {
+        Localisation pointRecherche = Localisation.builder()
+                .latitude(latitude)
+                .longitude(longitude)
+                .build();
+
+        return produitRepository.findByDisponibiliteTrue(org.springframework.data.domain.Pageable.unpaged())
+                .stream()
+                .filter(produit -> produit.getProducteur().getLocalisation()
+                        .calculerDistance(pointRecherche) <= rayonKm)
+                .collect(Collectors.toList());
     }
 
 }
