@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
  */
 public class TelephoneBurkinabeValidator implements ConstraintValidator<TelephoneBurkinabe, String> {
 
-    // Regexp autorisant +226 avec 8 chiffres ou directement 8 chiffres commençant par 0, 5, 6, 7 (operateurs local Orange, Moov, Telecel)
-    private static final Pattern PATTERN = Pattern.compile("^(\\+226|00226)?[567]\\d{7}$");
+    // Regexp autorisant l'indicatif optionnel (+226 ou 00226) suivi de 8 chiffres (les espaces sont retirés avant validation)
+    private static final Pattern PATTERN = Pattern.compile("^(\\+226|00226)?\\d{8}$");
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {

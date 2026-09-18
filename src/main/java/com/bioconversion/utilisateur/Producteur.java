@@ -79,7 +79,7 @@ public class Producteur extends Utilisateur {
      * {@code producteur}.
      */
     @NotNull(message = "La localisation du producteur est obligatoire")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "localisation_id", nullable = false)
     private Localisation localisation;
 

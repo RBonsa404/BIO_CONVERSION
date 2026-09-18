@@ -48,3 +48,5 @@ app:
       - http://localhost:8080
   upload:
     identite-dir: ${UPLOAD_DIR:./uploads/identites}
+  commission:
+    taux: 0.05

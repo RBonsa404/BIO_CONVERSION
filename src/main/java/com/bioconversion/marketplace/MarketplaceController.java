@@ -1,6 +1,7 @@
 package com.bioconversion.marketplace;
 
 import com.bioconversion.common.dto.ApiResponse;
+import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -64,4 +65,17 @@ public class MarketplaceController {
         return ResponseEntity.ok(ApiResponse.success(resultats));
     }
 
+    /**
+     * Recherche géolocalisée de producteurs validés par rayon (CDC §2.2.2 & B-MUST-1).
+     */
+    @GetMapping("/producteurs/recherche-geolocalisee")
+    public ResponseEntity<ApiResponse<List<ProducteurLocaliseDto>>> rechercherProducteursParRayon(
+            @RequestParam double latitude,
+            @RequestParam double longitude,
+            @RequestParam(defaultValue = "50.0") double rayonKm) {
+        List<ProducteurLocaliseDto> producteurs = marketplaceService.rechercherProducteursParRayon(latitude, longitude, rayonKm);
+        return ResponseEntity.ok(ApiResponse.success(producteurs));
+    }
+
 }
+

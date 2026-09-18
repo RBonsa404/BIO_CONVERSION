@@ -65,11 +65,16 @@ public class SecurityConfig {
 
                         // ── Endpoints publics ──────────────────────────────
                         .requestMatchers(HttpMethod.POST,
-                                "/api/auth/inscription",
-                                "/api/auth/connexion")
+                                "/api/v1/auth/register/**",
+                                "/api/v1/auth/login")
                         .permitAll()
 
-                        // Swagger / OpenAPI (désactiver en prod si nécessaire)
+                        // Webhook Orange Money (callbacks bancaires/opérateurs)
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/paiements/webhook/**")
+                        .permitAll()
+
+                        // Swagger / OpenAPI
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -77,28 +82,23 @@ public class SecurityConfig {
                         .permitAll()
 
                         // ── Module A — IoT ────────────────────────────────
-                        // TODO (Module A) : affiner les permissions par endpoint
-                        .requestMatchers("/api/iot/**")
+                        .requestMatchers("/api/v1/iot/**")
                         .hasAnyRole("PRODUCTEUR", "ADMINISTRATEUR")
 
                         // ── Module B — Marketplace ────────────────────────
-                        // TODO (Module B) : affiner les permissions
-                        .requestMatchers("/api/produits/**")
-                        .hasAnyRole("PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR")
-                        .requestMatchers("/api/commandes/**")
+                        .requestMatchers("/api/v1/marketplace/**")
                         .hasAnyRole("PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR")
 
                         // ── Module C — Paiement ───────────────────────────
-                        // TODO (Module C) : affiner les permissions
-                        .requestMatchers("/api/paiements/**")
+                        .requestMatchers("/api/v1/paiements/**")
                         .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
 
-                        // ── Administration ────────────────────────────────
-                        .requestMatchers("/api/admin/**")
-                        .hasAnyRole("ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
+                        // ── Module D — Réseau Producteurs ─────────────────
+                        .requestMatchers("/api/v1/producteurs/**")
+                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
 
-                        // ── Profil utilisateur ────────────────────────────
-                        .requestMatchers("/api/auth/**").authenticated()
+                        // ── Profil utilisateur & auth ─────────────────────
+                        .requestMatchers("/api/v1/auth/**").authenticated()
 
                         // Tout le reste exige une authentification
                         .anyRequest().authenticated())

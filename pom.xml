@@ -4,14 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!--
-        NOTA BENE (ADR-006) :
-        Le CDC impose "Spring Boot 4.1.1" — version inexistante sur Maven Central à la date de création
-        de cette base (septembre 2026, la branche 4.x n'est pas encore GA).
-        Choix documenté : utilisation de Spring Boot 3.3.5 (dernier patch stable de la série 3.x,
-        Spring Framework 6.x). Migration vers 4.x à planifier dès que la version sera disponible.
-        Voir docs/ADR/ADR-006_spring_boot_version.md
-    -->
+  
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
