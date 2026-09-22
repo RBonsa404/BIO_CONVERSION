@@ -2,6 +2,7 @@ package com.bioconversion.marketplace;
 
 import com.bioconversion.common.dto.ApiResponse;
 import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
+import com.bioconversion.marketplace.dto.ProduitDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,8 +53,8 @@ public class MarketplaceController {
     }
 
     @GetMapping("/produits/producteur/{producteurId}")
-    public ResponseEntity<ApiResponse<List<Produit>>> consulterCatalogueProducteur(@PathVariable Long producteurId) {
-        List<Produit> catalogue = marketplaceService.consulterCatalogueProducteur(producteurId);
+    public ResponseEntity<ApiResponse<List<ProduitDto>>> consulterCatalogueProducteur(@PathVariable Long producteurId) {
+        List<ProduitDto> catalogue = marketplaceService.consulterCatalogueProducteurDto(producteurId);
         return ResponseEntity.ok(ApiResponse.success(catalogue));
     }
 
