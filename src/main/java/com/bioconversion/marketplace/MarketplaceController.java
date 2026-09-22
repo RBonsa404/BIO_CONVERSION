@@ -1,6 +1,7 @@
 package com.bioconversion.marketplace;
 
 import com.bioconversion.common.dto.ApiResponse;
+import com.bioconversion.marketplace.dto.CommandeDto;
 import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -77,5 +78,69 @@ public class MarketplaceController {
         return ResponseEntity.ok(ApiResponse.success(producteurs));
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // ENDPOINTS CYCLE DE COMMANDE (B-MUST-4, B-MUST-6, B-MUST-7, B-MUST-8)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @PostMapping("/commandes")
+    public ResponseEntity<ApiResponse<CommandeDto>> passerCommande(
+            @jakarta.validation.Valid @RequestBody com.bioconversion.marketplace.dto.PasserCommandeRequest request,
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyHeader) {
+        String key = idempotencyHeader != null ? idempotencyHeader : request.getIdempotencyKey();
+        Commande commande = marketplaceService.passerCommande(
+                request.getEleveurId(),
+                request.getProduitId(),
+                request.getQuantite(),
+                key);
+        return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande passée avec succès"));
+    }
+
+    @PatchMapping("/commandes/{commandeId}/statut")
+    public ResponseEntity<ApiResponse<CommandeDto>> changerStatutCommande(
+            @PathVariable Long commandeId,
+            @jakarta.validation.Valid @RequestBody com.bioconversion.marketplace.dto.ChangerStatutCommandeRequest request) {
+        Commande commande = marketplaceService.changerStatutCommande(commandeId, request.getNouveauStatut());
+        return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Statut de la commande mis à jour"));
+    }
+
+    @PostMapping("/commandes/{commandeId}/confirmer")
+    public ResponseEntity<ApiResponse<CommandeDto>> confirmerCommande(
+            @PathVariable Long commandeId,
+            @RequestParam(required = false) Long producteurId) {
+        Commande commande = marketplaceService.confirmerCommande(commandeId, producteurId);
+        return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande confirmée avec succès"));
+    }
+
+    @PostMapping("/commandes/{commandeId}/annuler")
+    public ResponseEntity<ApiResponse<CommandeDto>> annulerCommande(
+            @PathVariable Long commandeId,
+            @RequestParam(required = false) String motif) {
+        Commande commande = marketplaceService.annulerCommande(commandeId, motif);
+        return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande annulée avec succès"));
+    }
+
+    @GetMapping("/commandes/{commandeId}")
+    public ResponseEntity<ApiResponse<CommandeDto>> obtenirCommande(@PathVariable Long commandeId) {
+        Commande commande = marketplaceService.trouverCommandeParId(commandeId);
+        return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande)));
+    }
+
+    @GetMapping("/commandes/eleveur/{eleveurId}")
+    public ResponseEntity<ApiResponse<Page<CommandeDto>>> listerCommandesEleveur(
+            @PathVariable Long eleveurId,
+            Pageable pageable) {
+        Page<Commande> page = marketplaceService.listerCommandesEleveur(eleveurId, pageable);
+        Page<CommandeDto> dtoPage = page.map(CommandeDto::fromEntity);
+        return ResponseEntity.ok(ApiResponse.success(dtoPage));
+    }
+
+    @GetMapping("/commandes/producteur/{producteurId}")
+    public ResponseEntity<ApiResponse<Page<CommandeDto>>> listerCommandesProducteur(
+            @PathVariable Long producteurId,
+            Pageable pageable) {
+        Page<Commande> page = marketplaceService.listerCommandesProducteur(producteurId, pageable);
+        Page<CommandeDto> dtoPage = page.map(CommandeDto::fromEntity);
+        return ResponseEntity.ok(ApiResponse.success(dtoPage));
+    }
 }
 
