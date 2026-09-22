@@ -19,7 +19,23 @@ public interface MarketplaceService extends CommandeService {
 
     Commande passerCommande(Long eleveurId, Long produitId, Double quantite);
 
+    Commande passerCommande(Long eleveurId, Long produitId, Double quantite, String idempotencyKey);
+
     Commande changerStatutCommande(Long commandeId, StatutCommande nouveauStatut);
+
+    Commande confirmerCommande(Long commandeId, Long producteurId);
+
+    Commande annulerCommande(Long commandeId, String motif);
+
+    Commande trouverCommandeParId(Long commandeId);
+
+    Page<Commande> listerCommandesEleveur(Long eleveurId, Pageable pageable);
+
+    Page<Commande> listerCommandesProducteur(Long producteurId, Pageable pageable);
+
+    List<Commande> expirerCommandesNonConfirmees();
+
+    List<ProducteurLocaliseDto> proposerProducteursAlternatifs(Commande commande);
 
     Produit publierProduit(Produit produit, Long producteurId);
     Produit modifierStock(Long produitId, double nouvelleQuantite);
@@ -39,5 +55,4 @@ public interface MarketplaceService extends CommandeService {
      * Consultation du catalogue d'un producteur sous forme de DTO (B-MUST-2 & Contrat Binôme).
      */
     List<ProduitDto> consulterCatalogueProducteurDto(Long producteurId);
-
 }
