@@ -76,6 +76,7 @@ public class Commande {
     @Column(name = "date_commande", nullable = false)
     private OffsetDateTime dateCommande;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false, length = 20)
     private StatutCommande statut = StatutCommande.EN_ATTENTE;
@@ -85,6 +86,7 @@ public class Commande {
      * Constraint : au moins une ligne requise — validation métier dans MarketplaceService.
      * TODO Module B : vérifier stock disponible par ligne avant confirmation.
      */
+    @Builder.Default
     @OneToMany(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LigneCommande> lignes = new ArrayList<>();
 
@@ -104,6 +106,31 @@ public class Commande {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
+    @PrePersist
+    public void prePersist() {
+        if (dateCommande == null) {
+            dateCommande = OffsetDateTime.now();
+        }
+        if (numeroCommande == null || numeroCommande.trim().isEmpty()) {
+            numeroCommande = genererNumeroCommande();
+        }
+        if (statut == null) {
+            statut = StatutCommande.EN_ATTENTE;
+        }
+    }
+
+    public static String genererNumeroCommande() {
+        return "CMD-" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) + "-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    public void ajouterLigne(LigneCommande ligne) {
+        if (lignes == null) {
+            lignes = new ArrayList<>();
+        }
+        lignes.add(ligne);
+        ligne.setCommande(this);
+    }
+
     /**
      * Calcule le montant total de la commande (somme des sous-totaux des lignes).
      * TODO Module B : appeler cette méthode lors de la confirmation pour alimenter Paiement.montant.
@@ -112,7 +139,9 @@ public class Commande {
      * @return montant total en FCFA
      */
     public double calculerMontantTotal() {
-        // TODO Module B : implémenter
+        if (lignes == null || lignes.isEmpty()) {
+            return 0.0;
+        }
         return lignes.stream()
                 .mapToDouble(LigneCommande::calculerSousTotal)
                 .sum();

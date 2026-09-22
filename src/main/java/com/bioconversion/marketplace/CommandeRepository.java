@@ -5,6 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,7 +19,13 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
 
     Page<Commande> findByEleveurIdUtilisateur(Long eleveurId, Pageable pageable);
 
+    List<Commande> findByEleveurIdUtilisateur(Long eleveurId);
+
     Page<Commande> findByProducteurIdUtilisateur(Long producteurId, Pageable pageable);
 
+    List<Commande> findByProducteurIdUtilisateur(Long producteurId);
+
     Page<Commande> findByStatut(StatutCommande statut, Pageable pageable);
+
+    List<Commande> findByStatutAndDateCommandeBefore(StatutCommande statut, OffsetDateTime dateLimite);
 }
