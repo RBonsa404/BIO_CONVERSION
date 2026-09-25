@@ -4,6 +4,7 @@ import com.bioconversion.config.AppProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Point d'entrée principal de la plateforme BioConversion.
@@ -28,6 +29,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * </p>
  */
 @SpringBootApplication
+@EnableScheduling
 @EnableConfigurationProperties(AppProperties.class)
 public class BioConversionApplication {
 

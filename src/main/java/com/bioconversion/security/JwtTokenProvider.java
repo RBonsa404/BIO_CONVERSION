@@ -7,14 +7,10 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
-
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.stream.Collectors;
 
 /**
  * Composant responsable de la génération, de la validation et de l'extraction
@@ -42,32 +38,6 @@ import java.util.stream.Collectors;
 public class JwtTokenProvider {
 
     private final AppProperties appProperties;
-
-    /**
-     * Génère un token JWT signé pour l'utilisateur authentifié.
-     *
-     * @param authentication l'objet Authentication Spring Security après connexion
-     *                       réussie
-     * @return le token JWT sous forme de chaîne
-     */
-    public String generateToken(Authentication authentication) {
-        String telephone = authentication.getName();
-
-        String roles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
-
-        Date now = new Date();
-        Date expiry = new Date(now.getTime() + appProperties.jwt().expirationMs());
-
-        return Jwts.builder()
-                .subject(telephone)
-                .claim("roles", roles)
-                .issuedAt(now)
-                .expiration(expiry)
-                .signWith(getSigningKey())
-                .compact();
-    }
 
     /**
      * Génère un token JWT signé avec téléphone, rôle et userId.

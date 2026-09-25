@@ -1,18 +1,16 @@
 package com.bioconversion.utilisateur.dto;
 
 import com.bioconversion.common.validation.TelephoneBurkinabe;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
 /**
- * DTO d'inscription utilisateur unifié (Producteur / Éleveur).
+ * DTO d'inscription spécifique pour un Producteur.
  */
 @Getter
 @Setter
-public class RegisterRequest {
+public class ProducteurRegisterRequest {
 
     @NotBlank(message = "Le nom est obligatoire")
     @Size(max = 100, message = "Le nom ne peut dépasser 100 caractères")
@@ -30,17 +28,19 @@ public class RegisterRequest {
     @Size(min = 6, message = "Le mot de passe doit contenir au moins 6 caractères")
     private String motDePasse;
 
-    @NotNull(message = "Le type de rôle est obligatoire (PRODUCTEUR ou ELEVEUR)")
-    private TypeRole typeRole;
+    @NotBlank(message = "Le nom de l'exploitation est obligatoire")
+    @Size(max = 200, message = "Le nom de l'exploitation ne peut dépasser 200 caractères")
+    private String nomExploitation;
 
-    // Métadonnées géographiques optionnelles pour Producteur ou Éleveur
+    @NotNull(message = "La capacité de production est obligatoire")
+    @PositiveOrZero(message = "La capacité de production doit être positive ou nulle")
+    private Double capaciteProduction;
+
+    // Métadonnées géographiques
     private Double latitude;
     private Double longitude;
+    @Size(max = 150, message = "La province ne peut dépasser 150 caractères")
     private String province;
+    @Size(max = 150, message = "La ville ne peut dépasser 150 caractères")
     private String ville;
-
-    public enum TypeRole {
-        PRODUCTEUR,
-        ELEVEUR
-    }
 }

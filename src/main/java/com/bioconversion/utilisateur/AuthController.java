@@ -3,7 +3,8 @@ package com.bioconversion.utilisateur;
 import com.bioconversion.common.dto.ApiResponse;
 import com.bioconversion.utilisateur.dto.AuthRequest;
 import com.bioconversion.utilisateur.dto.AuthResponse;
-import com.bioconversion.utilisateur.dto.RegisterRequest;
+import com.bioconversion.utilisateur.dto.EleveurRegisterRequest;
+import com.bioconversion.utilisateur.dto.ProducteurRegisterRequest;
 import com.bioconversion.utilisateur.dto.UtilisateurResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +28,17 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(response, "Authentification réussie"));
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UtilisateurResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        UtilisateurResponse response = authService.register(request);
+    @PostMapping("/register/producteur")
+    public ResponseEntity<ApiResponse<UtilisateurResponse>> registerProducteur(@Valid @RequestBody ProducteurRegisterRequest request) {
+        UtilisateurResponse response = authService.registerProducteur(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Compte créé avec succès"));
+                .body(ApiResponse.success(response, "Compte producteur créé avec succès"));
+    }
+
+    @PostMapping("/register/eleveur")
+    public ResponseEntity<ApiResponse<UtilisateurResponse>> registerEleveur(@Valid @RequestBody EleveurRegisterRequest request) {
+        UtilisateurResponse response = authService.registerEleveur(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Compte éleveur créé avec succès"));
     }
 }

@@ -34,7 +34,7 @@ public class ReseauProducteurController {
     }
 
     @PutMapping("/{id}/valider")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRATEUR')")
     public ResponseEntity<ApiResponse<Producteur>> validerProducteur(
             @PathVariable Long id,
             @RequestParam boolean approuve) {

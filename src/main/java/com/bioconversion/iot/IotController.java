@@ -28,7 +28,7 @@ public class IotController {
     }
 
     @GetMapping("/capteurs/producteur/{producteurId}")
-    @PreAuthorize("hasAnyRole('PRODUCTEUR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('PRODUCTEUR', 'ADMINISTRATEUR')")
     public ResponseEntity<ApiResponse<List<Capteur>>> listerCapteurs(@PathVariable Long producteurId) {
         List<Capteur> capteurs = iotService.ObtenirCapteursProducteur(producteurId);
         return ResponseEntity.ok(ApiResponse.success(capteurs));
