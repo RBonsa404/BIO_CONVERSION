@@ -67,7 +67,7 @@ public class Eleveur extends Utilisateur {
      * et le révoquer à tout moment (use case "Révoquer le partage").
      * Null si l'éleveur n'a pas partagé sa localisation.
      */
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "localisation_id", nullable = true)
     private Localisation localisation;
 

@@ -4,6 +4,7 @@ import com.bioconversion.common.exception.BusinessException;
 import com.bioconversion.common.exception.ResourceNotFoundException;
 import com.bioconversion.marketplace.Commande;
 import com.bioconversion.marketplace.CommandeRepository;
+import com.bioconversion.marketplace.CommandeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class PaiementServiceImpl implements PaiementService {
     private final CommandeRepository commandeRepository;
     private final PaiementRepository paiementRepository;
     private final FactureService factureService;
+    private final CommandeService commandeService;
 
     @Override
     @Transactional
@@ -82,11 +84,9 @@ public class PaiementServiceImpl implements PaiementService {
         // (dispatch §6 point 1 — AlerteIoT reste dédiée aux capteurs d'après
         // ZAREI Seybou). Non implémenté ici tant que ce n'est pas tranché.
 
-        // TODO : mise à jour Commande.statut = PAYÉ (diagramme de séquence,
-        // étape 7). BLOQUANT : StatutCommande (Module B) n'a pas de valeur
-        // PAYE — nécessite l'accord inter-binômes sur le contrat de statut
-        // commun (dispatch §6 point 4) avant d'écrire commande.setStatut(...).
-        // Ne pas deviner un mapping ici.
+        // Contrat officiel inter-modules (Module B — CommandeService) : notifie
+        // le passage au statut PAYE, étape 7 du diagramme de séquence.
+        commandeService.marquerCommandePayee(paiement.getCommande().getIdCommande());
 
         return paiement;
     }

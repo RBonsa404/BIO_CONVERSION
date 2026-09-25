@@ -71,8 +71,18 @@ public class Produit {
     @Column(name = "prix", nullable = false)
     private double prix;
 
+    /**
+     * Type de produit (Larve ou Résidu/Déchet de production) — CDC §2.2.2 & B-MUST-5.
+     */
+    @NotNull(message = "Le type de produit est obligatoire")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_produit", nullable = false, length = 50)
+    @Builder.Default
+    private TypeProduit typeProduit = TypeProduit.LARVE;
+
     @Column(name = "disponibilite", nullable = false)
     private boolean disponibilite = true;
+
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
