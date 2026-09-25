@@ -92,6 +92,8 @@ public class SecurityConfig {
                         // ── Module C — Paiement ───────────────────────────
                         .requestMatchers("/api/v1/paiements/**")
                         .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
+                        .requestMatchers("/api/v1/factures/**")
+                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
 
                         // ── Module D — Réseau Producteurs ─────────────────
                         .requestMatchers("/api/v1/producteurs/**")

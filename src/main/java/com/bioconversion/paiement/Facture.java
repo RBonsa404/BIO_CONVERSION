@@ -53,6 +53,10 @@ public class Facture {
     @Column(name = "reference", nullable = false, unique = true, length = 255)
     private String reference;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
     /**
      * Chemin vers le fichier PDF généré.
      * TODO Module C : renseigner après appel à genererPDF().

@@ -49,4 +49,6 @@ app:
   upload:
     identite-dir: ${UPLOAD_DIR:./uploads/identites}
   commission:
-    taux: 0.05
+    # C-MUST-5 : taux de commission plateforme, paramétrable côté administration.
+    # Fraction du montant du paiement (0.05 = 5%), jamais codé en dur dans FactureService.
+    taux: ${COMMISSION_TAUX:0.05}
