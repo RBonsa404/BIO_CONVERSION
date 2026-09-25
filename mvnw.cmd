@@ -10,17 +10,22 @@ for /f "tokens=2 delims==" %%i in ('findstr "distributionUrl" "%MAVEN_WRAPPER_PR
 set MAVEN_USER_HOME=%USERPROFILE%\.m2\wrapper\dists
 set MAVEN_ZIP=%TEMP%\maven-wrapper.zip
 
-for %%F in ("%DISTRIBUTION_URL%") do set MAVEN_DIR_NAME=%%~nF
-set MAVEN_HOME=%MAVEN_USER_HOME%\%MAVEN_DIR_NAME%
+set MAVEN_HOME=%MAVEN_USER_HOME%\apache-maven-3.9.9
 
 if not exist "%MAVEN_HOME%" (
     echo Downloading Maven from %DISTRIBUTION_URL%
     powershell -Command "Invoke-WebRequest -Uri '%DISTRIBUTION_URL%' -OutFile '%MAVEN_ZIP%'"
-    powershell -Command "Expand-Archive -LiteralPath '%MAVEN_ZIP%' -DestinationPath '%MAVEN_USER_HOME%'"
+    powershell -Command "Expand-Archive -Force -LiteralPath '%MAVEN_ZIP%' -DestinationPath '%MAVEN_USER_HOME%'"
     del "%MAVEN_ZIP%"
 )
-
-for /r "%MAVEN_HOME%" %%f in (mvn.cmd) do set MAVEN_BIN=%%f
+for /r "%MAVEN_USER_HOME%" %%f in (mvn.cmd) do (
+    if exist "%%~dpfbin\mvn.cmd" set MAVEN_BIN=%%~dpfbin\mvn.cmd
+)
+if "%MAVEN_BIN%"=="" (
+    for /r "%MAVEN_USER_HOME%" %%f in (mvn.cmd) do (
+        if "%%~nxf"=="mvn.cmd" if exist "%%f" set MAVEN_BIN=%%f
+    )
+)
 
 "%MAVEN_BIN%" %*
 endlocal
