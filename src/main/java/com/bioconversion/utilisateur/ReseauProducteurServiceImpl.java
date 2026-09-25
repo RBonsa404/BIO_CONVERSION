@@ -1,6 +1,7 @@
 package com.bioconversion.utilisateur;
 
 import com.bioconversion.common.exception.ResourceNotFoundException;
+import com.bioconversion.utilisateur.dto.CommandeValideeNotification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +39,35 @@ public class ReseauProducteurServiceImpl implements ReseauProducteurService {
 
     @Override
     @Transactional
+    public Producteur mettreAJourCapaciteProduction(Long producteurId, double nouvelleCapacite) {
+        Producteur p = producteurRepository.findById(producteurId)
+                .orElseThrow(() -> new ResourceNotFoundException("Producteur non trouvé avec l'id : " + producteurId));
+        p.setCapaciteProduction(nouvelleCapacite);
+        p.setCapaciteDerniereMaj(java.time.OffsetDateTime.now());
+        return producteurRepository.save(p);
+    }
+
+    @Override
+    public void notifierProducteurCommandeValidee(CommandeValideeNotification notification) {
+        Producteur p = producteurRepository.findById(notification.getProducteurId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Producteur non trouvé avec l'id : " + notification.getProducteurId()));
+
+        // SIMULATION POUR L'INSTANT : envoi reel (SMS/push) a brancher plus tard
+        System.out.println("Notification envoyee au producteur " + p.getNomExploitation()
+                + " : commande n°" + notification.getNumeroCommande() + " validee.");
+    }
+
+    @Override
+    @Transactional
+    public Producteur consulterProducteur(Long id) {
+        Producteur p = producteurRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producteur non trouvé avec l'id : " + id));
+        p.setNombreConsultations(p.getNombreConsultations() + 1);
+        return producteurRepository.save(p);
+    }
+
+    @Override
     public Producteur suspendreCompte(Long utilisateurId) {
         Utilisateur u = utilisateurRepository.findById(utilisateurId)
                 .orElseThrow(

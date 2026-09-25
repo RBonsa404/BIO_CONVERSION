@@ -16,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.OffsetDateTime;
 
 /**
  * Sous-type Producteur — hérite de {@link Utilisateur} (stratégie JOINED).
@@ -64,6 +65,15 @@ public class Producteur extends Utilisateur {
     @PositiveOrZero(message = "La capacité de production doit être positive ou nulle")
     @Column(name = "capacite_production", nullable = false)
     private double capaciteProduction;
+    /**
+ * Date et heure de la dernière mise à jour de la capacité de production.
+ * Exigence D-MUST-3 : toute modification doit être horodatée.
+ */
+    @Column(name = "capacite_derniere_maj")
+    private OffsetDateTime capaciteDerniereMaj;
+
+    @Column(name = "nombre_consultations", nullable = false)
+    private long nombreConsultations = 0;
 
     /**
      * Indique si le compte producteur a été validé par un administrateur (CDC

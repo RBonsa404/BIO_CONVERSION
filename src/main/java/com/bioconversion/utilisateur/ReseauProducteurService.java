@@ -2,6 +2,7 @@ package com.bioconversion.utilisateur;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.bioconversion.utilisateur.dto.CommandeValideeNotification;
 
 /**
  * Interface de service pour le Module D — Réseau des Producteurs &
@@ -21,4 +22,12 @@ public interface ReseauProducteurService {
     Producteur validerProducteur(Long producteurId, boolean approuve);
 
     Producteur suspendreCompte(Long utilisateurId);
+    
+    Producteur mettreAJourCapaciteProduction(Long producteurId, double nouvelleCapacite);
+    
+    void notifierProducteurCommandeValidee(CommandeValideeNotification notification);
+    
+    Producteur consulterProducteur(Long id);
+
+    
 }

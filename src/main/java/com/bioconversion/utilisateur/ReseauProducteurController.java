@@ -1,6 +1,8 @@
 package com.bioconversion.utilisateur;
 
 import com.bioconversion.common.dto.ApiResponse;
+import com.bioconversion.utilisateur.dto.CommandeValideeNotification;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,12 @@ public class ReseauProducteurController {
         return ResponseEntity.ok(ApiResponse.success(producteurs));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<Producteur>> consulterProducteur(@PathVariable Long id) {
+    Producteur producteur = reseauProducteurService.consulterProducteur(id);
+        return ResponseEntity.ok(ApiResponse.success(producteur));
+}
+
     @PutMapping("/{id}/valider")
     @PreAuthorize("hasRole('ADMINISTRATEUR')")
     public ResponseEntity<ApiResponse<Producteur>> validerProducteur(
@@ -40,5 +48,22 @@ public class ReseauProducteurController {
             @RequestParam boolean approuve) {
         Producteur producteur = reseauProducteurService.validerProducteur(id, approuve);
         return ResponseEntity.ok(ApiResponse.success(producteur, "Statut de validation du producteur mis à jour"));
+    }
+
+    @PatchMapping("/{id}/capacite")
+    @PreAuthorize("hasRole('ADMINISTRATEUR') or @producteurSecurity.estProprietaire(#id, authentication)")
+    public ResponseEntity<ApiResponse<Producteur>> mettreAJourCapacite(
+            @PathVariable Long id,
+            @RequestParam double nouvelleCapacite) {
+        Producteur producteur = reseauProducteurService.mettreAJourCapaciteProduction(id, nouvelleCapacite);
+        return ResponseEntity.ok(ApiResponse.success(producteur, "Capacité de production mise à jour"));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/commande-validee")
+    public ResponseEntity<ApiResponse<Void>> notifierCommandeValidee(
+            @Valid @RequestBody CommandeValideeNotification notification) {
+        reseauProducteurService.notifierProducteurCommandeValidee(notification);
+        return ResponseEntity.ok(ApiResponse.success(null, "Producteur notifié"));
     }
 }
