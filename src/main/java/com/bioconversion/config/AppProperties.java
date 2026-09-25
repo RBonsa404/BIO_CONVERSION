@@ -25,6 +25,10 @@ import java.util.List;
  *   security:
  *     allowed-origins:
  *       - http://localhost:3000
+ *   commission:
+ *     taux: 0.05
+ *   entreprise:
+ *     nom: "BIO CONVERSION"
  * </pre>
  * </p>
  */
@@ -38,7 +42,9 @@ public record AppProperties(
 
                 UploadProperties upload,
 
-                @NotNull @Valid CommissionProperties commission
+                @NotNull @Valid CommissionProperties commission,
+
+                @NotNull @Valid EntrepriseProperties entreprise
 
 ) {
 
@@ -62,5 +68,22 @@ public record AppProperties(
          */
         public record CommissionProperties(
                         @Positive double taux) {
+        }
+
+        /**
+         * Informations légales de l'entreprise, affichées sur les factures.
+         * Valeurs placeholder tant que les données fiscales réelles (IFU, RCCM,
+         * coordonnées bancaires) ne sont pas fournies par la MOA — à remplacer
+         * directement dans application.yml quand elles seront disponibles.
+         */
+        public record EntrepriseProperties(
+                        @NotBlank String nom,
+                        String ifu,
+                        String rccm,
+                        String adresse,
+                        String telephone,
+                        String email,
+                        String banque,
+                        String iban) {
         }
 }

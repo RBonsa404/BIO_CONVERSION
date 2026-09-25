@@ -83,101 +83,124 @@ public class FactureServiceImpl implements FactureService {
         String nomFichier = facture.getReference() + ".pdf";
         Path chemin = Paths.get(DOSSIER_FACTURES, nomFichier);
 
-        Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+        var entreprise = appProperties.entreprise();
+        var commande = facture.getPaiement().getCommande();
+        var eleveur = commande.getEleveur();
+
+        Document document = new Document(PageSize.A4, 40, 40, 40, 40);
         try (var out = Files.newOutputStream(chemin)) {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // Couleurs de la charte (sobre, cf. CDC §4.4)
             Color vertPrincipal = new Color(46, 125, 50);
             Color grisTexte = new Color(60, 60, 60);
             Color grisClair = new Color(240, 240, 240);
+            Color grisFonce = new Color(90, 90, 90);
 
-            Font policeTitre = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, vertPrincipal);
-            Font policeSousTitre = FontFactory.getFont(FontFactory.HELVETICA, 10, grisTexte);
-            Font policeLabel = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, grisTexte);
-            Font policeValeur = FontFactory.getFont(FontFactory.HELVETICA, 10, grisTexte);
-            Font policeTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, vertPrincipal);
+            Font policeNomEntreprise = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, vertPrincipal);
+            Font policePetite = FontFactory.getFont(FontFactory.HELVETICA, 8, grisFonce);
+            Font policeTitreDoc = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, grisTexte);
+            Font policeLabel = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, grisTexte);
+            Font policeValeur = FontFactory.getFont(FontFactory.HELVETICA, 9, grisTexte);
+            Font policeEnteteTableau = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE);
+            Font policeTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, vertPrincipal);
+            Font policeAvertissement = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.RED);
 
-            // En-tête
-            Paragraph titre = new Paragraph("BIO CONVERSION", policeTitre);
-            titre.setAlignment(Element.ALIGN_LEFT);
-            document.add(titre);
-
-            Paragraph sousTitre = new Paragraph(
-                    "Plateforme numérique de bio-conversion — Burkina Faso", policeSousTitre);
-            sousTitre.setSpacingAfter(20);
-            document.add(sousTitre);
-
-            // Ligne de séparation
+            // En-tête entreprise
+            document.add(new Paragraph(entreprise.nom(), policeNomEntreprise));
+            document.add(new Paragraph(
+                    "IFU " + valeurOuPlaceholder(entreprise.ifu()) +
+                    " · RCCM " + valeurOuPlaceholder(entreprise.rccm()), policePetite));
+            document.add(new Paragraph(valeurOuPlaceholder(entreprise.adresse()), policePetite));
+            document.add(new Paragraph(
+                    valeurOuPlaceholder(entreprise.telephone()) + " · " +
+                    valeurOuPlaceholder(entreprise.email()), policePetite));
+            document.add(new Paragraph(" "));
             document.add(ligneSeparatrice(vertPrincipal));
             document.add(new Paragraph(" "));
 
-            // Titre du document
-            Paragraph libelle = new Paragraph("FACTURE",
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, grisTexte));
-            libelle.setSpacingAfter(15);
-            document.add(libelle);
+            // Titre document + numéro/date
+            PdfPTable enteteDoc = new PdfPTable(2);
+            enteteDoc.setWidthPercentage(100);
+            enteteDoc.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+            PdfPCell celluleTitre = new PdfPCell(new Phrase("FACTURE N° " + facture.getReference(), policeTitreDoc));
+            celluleTitre.setBorder(Rectangle.NO_BORDER);
+            PdfPCell celluleDate = new PdfPCell(new Phrase(
+                    facture.getDateFacture().toString(), policeValeur));
+            celluleDate.setBorder(Rectangle.NO_BORDER);
+            celluleDate.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            enteteDoc.addCell(celluleTitre);
+            enteteDoc.addCell(celluleDate);
+            enteteDoc.setSpacingAfter(15);
+            document.add(enteteDoc);
 
-            // Bloc infos (référence / date / commande)
-            PdfPTable infos = new PdfPTable(2);
-            infos.setWidthPercentage(100);
-            infos.setSpacingAfter(20);
-            infos.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+            // Bloc client (éleveur)
+            document.add(new Paragraph("Client", policeLabel));
+            document.add(new Paragraph(
+                    eleveur.getNom() + " " + eleveur.getPrenom(), policeValeur));
+            document.add(new Paragraph(eleveur.getTelephone(), policeValeur));
+            document.add(new Paragraph("Commande n° " + commande.getNumeroCommande(), policeValeur));
+            document.add(new Paragraph(" "));
 
-            ajouterLigneInfo(infos, "Référence", facture.getReference(), policeLabel, policeValeur);
-            ajouterLigneInfo(infos, "Date", facture.getDateFacture().toString(), policeLabel, policeValeur);
-            ajouterLigneInfo(infos, "Commande n°",
-                    facture.getPaiement().getCommande().getNumeroCommande(), policeLabel, policeValeur);
-            ajouterLigneInfo(infos, "Opérateur de paiement",
-                    facture.getPaiement().getOperateur(), policeLabel, policeValeur);
-            document.add(infos);
+            // Tableau des lignes (Désignation / Qté / P.U. / Montant)
+            PdfPTable tableauLignes = new PdfPTable(4);
+            tableauLignes.setWidthPercentage(100);
+            tableauLignes.setWidths(new float[]{4, 1, 1.5f, 1.5f});
+            tableauLignes.setSpacingAfter(10);
 
-            // Tableau du détail financier
-            PdfPTable detail = new PdfPTable(2);
-            detail.setWidthPercentage(100);
-            detail.setWidths(new float[]{3, 1});
-            detail.setSpacingAfter(10);
+            ajouterEnteteTableau(tableauLignes, "Désignation", vertPrincipal, policeEnteteTableau);
+            ajouterEnteteTableau(tableauLignes, "Qté", vertPrincipal, policeEnteteTableau);
+            ajouterEnteteTableau(tableauLignes, "P.U. (FCFA)", vertPrincipal, policeEnteteTableau);
+            ajouterEnteteTableau(tableauLignes, "Montant (FCFA)", vertPrincipal, policeEnteteTableau);
 
-            ajouterEnteteTableau(detail, "Description", grisClair, policeLabel);
-            ajouterEnteteTableau(detail, "Montant (FCFA)", grisClair, policeLabel);
+            for (var ligne : commande.getLignes()) {
+                ajouterLigneGauche(tableauLignes, ligne.getProduit().getNomProduit(), policeValeur);
+                ajouterLigneCentree(tableauLignes, String.valueOf(ligne.getQuantite()), policeValeur);
+                ajouterLigneDroite(tableauLignes,
+                        String.format(Locale.FRANCE, "%,.0f", ligne.getPrixUnitaireFige()), policeValeur);
+                ajouterLigneDroite(tableauLignes,
+                        String.format(Locale.FRANCE, "%,.0f", ligne.calculerSousTotal()), policeValeur);
+            }
+            document.add(tableauLignes);
 
-            ajouterLigneTableau(detail, "Montant payé par l'éleveur",
-                    String.format(Locale.FRANCE, "%,.0f", facture.getMontant()), policeValeur);
-            ajouterLigneTableau(detail,
+            // Récapitulatif montant / commission / total
+            PdfPTable recap = new PdfPTable(2);
+            recap.setWidthPercentage(50);
+            recap.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            recap.setWidths(new float[]{2, 1});
+
+            ajouterLigneRecap(recap, "Montant payé", facture.getMontant(), policeValeur, false);
+            ajouterLigneRecap(recap,
                     String.format(Locale.FRANCE, "Commission plateforme (%.1f%%)", tauxCommission * 100),
-                    String.format(Locale.FRANCE, "%,.0f", montantCommission), policeValeur);
+                    montantCommission, policeValeur, false);
+            ajouterLigneRecap(recap, "TOTAL", facture.getMontant(), policeTotal, true);
 
-            document.add(detail);
+            recap.setSpacingBefore(10);
+            document.add(recap);
 
-            // Ligne total
-            PdfPTable total = new PdfPTable(2);
-            total.setWidthPercentage(100);
-            total.setWidths(new float[]{3, 1});
+            // Paiement
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("Règlement — " + facture.getPaiement().getOperateur(), policeLabel));
+            document.add(new Paragraph(
+                    "Référence de transaction : " + facture.getPaiement().getReferenceTransaction(),
+                    policeValeur));
 
-            PdfPCell celluleTotalLabel = new PdfPCell(new Phrase("Total payé", policeTotal));
-            celluleTotalLabel.setBorder(Rectangle.TOP);
-            celluleTotalLabel.setBorderColor(vertPrincipal);
-            celluleTotalLabel.setPaddingTop(8);
+            if (entreprise.banque() != null && !entreprise.banque().isBlank()
+                    && !"À renseigner".equalsIgnoreCase(entreprise.banque())) {
+                document.add(new Paragraph(
+                        "Compte — " + entreprise.banque() + " : " + valeurOuPlaceholder(entreprise.iban()),
+                        policePetite));
+            }
 
-            PdfPCell celluleTotalValeur = new PdfPCell(new Phrase(
-                    String.format(Locale.FRANCE, "%,.0f FCFA", facture.getMontant()), policeTotal));
-            celluleTotalValeur.setBorder(Rectangle.TOP);
-            celluleTotalValeur.setBorderColor(vertPrincipal);
-            celluleTotalValeur.setPaddingTop(8);
-            celluleTotalValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-
-            total.addCell(celluleTotalLabel);
-            total.addCell(celluleTotalValeur);
-            document.add(total);
-
-            // Pied de page
-            Paragraph piedDePage = new Paragraph(
-                    "\n\nFacture générée automatiquement — Bio Conversion, Ouagadougou, Burkina Faso",
-                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.GRAY));
-            piedDePage.setAlignment(Element.ALIGN_CENTER);
-            piedDePage.setSpacingBefore(40);
-            document.add(piedDePage);
+            // Bloc certification — PAS de faux code de signature
+            document.add(new Paragraph(" "));
+            document.add(ligneSeparatrice(Color.LIGHT_GRAY));
+            Paragraph certification = new Paragraph(
+                    "CERTIFICATION FISCALE — EN ATTENTE D'INTÉGRATION\n" +
+                    "Ce document n'est pas encore signé par un dispositif de certification agréé.",
+                    policeAvertissement);
+            certification.setSpacingBefore(8);
+            document.add(certification);
 
             document.close();
         }
@@ -192,52 +215,94 @@ public class FactureServiceImpl implements FactureService {
     }
 }
 
-private PdfPTable ligneSeparatrice(Color couleur) {
-    PdfPTable table = new PdfPTable(1);
-    table.setWidthPercentage(100);
-    PdfPCell cellule = new PdfPCell();
-    cellule.setBorder(Rectangle.BOTTOM);
-    cellule.setBorderColor(couleur);
-    cellule.setBorderWidth(2);
-    cellule.setFixedHeight(2);
-    table.addCell(cellule);
-    return table;
+private String valeurOuPlaceholder(String valeur) {
+    return (valeur == null || valeur.isBlank()) ? "À renseigner" : valeur;
 }
 
-private void ajouterLigneInfo(PdfPTable table, String label, String valeur, Font policeLabel, Font policeValeur) {
-    PdfPCell celluleLabel = new PdfPCell(new Phrase(label, policeLabel));
-    celluleLabel.setBorder(Rectangle.NO_BORDER);
-    celluleLabel.setPaddingBottom(4);
-
-    PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, policeValeur));
-    celluleValeur.setBorder(Rectangle.NO_BORDER);
-    celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-    celluleValeur.setPaddingBottom(4);
-
-    table.addCell(celluleLabel);
-    table.addCell(celluleValeur);
-}
-
-private void ajouterEnteteTableau(PdfPTable table, String texte, Color fond, Font police) {
+private void ajouterLigneCentree(PdfPTable table, String texte, Font police) {
     PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
-    cellule.setBackgroundColor(fond);
-    cellule.setPadding(8);
+    cellule.setPadding(6);
+    cellule.setHorizontalAlignment(Element.ALIGN_CENTER);
+    cellule.setBorderColor(Color.LIGHT_GRAY);
     table.addCell(cellule);
 }
 
-private void ajouterLigneTableau(PdfPTable table, String label, String valeur, Font police) {
-    PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
-    celluleLabel.setPadding(8);
-    celluleLabel.setBorderColor(Color.LIGHT_GRAY);
+private void ajouterLigneDroite(PdfPTable table, String texte, Font police) {
+    PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
+    cellule.setPadding(6);
+    cellule.setHorizontalAlignment(Element.ALIGN_RIGHT);
+    cellule.setBorderColor(Color.LIGHT_GRAY);
+    table.addCell(cellule);
+}
 
-    PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, police));
-    celluleValeur.setPadding(8);
+private void ajouterLigneGauche(PdfPTable table, String texte, Font police) {
+    PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
+    cellule.setPadding(6);
+    cellule.setBorderColor(Color.LIGHT_GRAY);
+    table.addCell(cellule);
+}
+
+private void ajouterLigneRecap(PdfPTable table, String label, double montant, Font police, boolean total) {
+    PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
+    celluleLabel.setBorder(total ? Rectangle.TOP : Rectangle.NO_BORDER);
+    celluleLabel.setPadding(6);
+
+    PdfPCell celluleValeur = new PdfPCell(new Phrase(
+            String.format(Locale.FRANCE, "%,.0f FCFA", montant), police));
+    celluleValeur.setBorder(total ? Rectangle.TOP : Rectangle.NO_BORDER);
     celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-    celluleValeur.setBorderColor(Color.LIGHT_GRAY);
+    celluleValeur.setPadding(6);
 
     table.addCell(celluleLabel);
     table.addCell(celluleValeur);
 }
+
+    private PdfPTable ligneSeparatrice(Color couleur) {
+        PdfPTable table = new PdfPTable(1);
+        table.setWidthPercentage(100);
+        PdfPCell cellule = new PdfPCell();
+        cellule.setBorder(Rectangle.BOTTOM);
+        cellule.setBorderColor(couleur);
+        cellule.setBorderWidth(2);
+        cellule.setFixedHeight(2);
+        table.addCell(cellule);
+        return table;
+    }
+
+    private void ajouterLigneInfo(PdfPTable table, String label, String valeur, Font policeLabel, Font policeValeur) {
+        PdfPCell celluleLabel = new PdfPCell(new Phrase(label, policeLabel));
+        celluleLabel.setBorder(Rectangle.NO_BORDER);
+        celluleLabel.setPaddingBottom(4);
+
+        PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, policeValeur));
+        celluleValeur.setBorder(Rectangle.NO_BORDER);
+        celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        celluleValeur.setPaddingBottom(4);
+
+        table.addCell(celluleLabel);
+        table.addCell(celluleValeur);
+    }
+
+    private void ajouterEnteteTableau(PdfPTable table, String texte, Color fond, Font police) {
+        PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
+        cellule.setBackgroundColor(fond);
+        cellule.setPadding(8);
+        table.addCell(cellule);
+    }
+
+    private void ajouterLigneTableau(PdfPTable table, String label, String valeur, Font police) {
+        PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
+        celluleLabel.setPadding(8);
+        celluleLabel.setBorderColor(Color.LIGHT_GRAY);
+
+        PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, police));
+        celluleValeur.setPadding(8);
+        celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        celluleValeur.setBorderColor(Color.LIGHT_GRAY);
+
+        table.addCell(celluleLabel);
+        table.addCell(celluleValeur);
+    }
 
     @Override
     public Facture consulterParReference(String reference) {

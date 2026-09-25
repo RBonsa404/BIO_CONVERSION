@@ -21,3 +21,12 @@ logging:
 app:
   commission:
     taux: 0.05  # 5% — valeur à confirmer avec la MOA (CDC §2.2.3, C-MUST-5)
+  entreprise:
+    nom: "BIO CONVERSION"
+    ifu: "À renseigner"
+    rccm: "À renseigner"
+    adresse: "Ouagadougou, Burkina Faso"
+    telephone: "À renseigner"
+    email: "contact@bioconversion.bf"
+    banque: "À renseigner"
+    iban: "À renseigner"
