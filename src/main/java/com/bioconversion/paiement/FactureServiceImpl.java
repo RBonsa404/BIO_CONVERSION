@@ -271,39 +271,11 @@ private void ajouterLigneRecap(PdfPTable table, String label, double montant, Fo
         return table;
     }
 
-    private void ajouterLigneInfo(PdfPTable table, String label, String valeur, Font policeLabel, Font policeValeur) {
-        PdfPCell celluleLabel = new PdfPCell(new Phrase(label, policeLabel));
-        celluleLabel.setBorder(Rectangle.NO_BORDER);
-        celluleLabel.setPaddingBottom(4);
-
-        PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, policeValeur));
-        celluleValeur.setBorder(Rectangle.NO_BORDER);
-        celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        celluleValeur.setPaddingBottom(4);
-
-        table.addCell(celluleLabel);
-        table.addCell(celluleValeur);
-    }
-
     private void ajouterEnteteTableau(PdfPTable table, String texte, Color fond, Font police) {
         PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
         cellule.setBackgroundColor(fond);
         cellule.setPadding(8);
         table.addCell(cellule);
-    }
-
-    private void ajouterLigneTableau(PdfPTable table, String label, String valeur, Font police) {
-        PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
-        celluleLabel.setPadding(8);
-        celluleLabel.setBorderColor(Color.LIGHT_GRAY);
-
-        PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, police));
-        celluleValeur.setPadding(8);
-        celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        celluleValeur.setBorderColor(Color.LIGHT_GRAY);
-
-        table.addCell(celluleLabel);
-        table.addCell(celluleValeur);
     }
 
     @Override
