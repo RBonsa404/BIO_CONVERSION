@@ -465,10 +465,10 @@ public class MarketplaceServiceImpl implements MarketplaceService {
             return commande;
         }
 
-        if (commande.getStatut() == StatutCommande.ANNULE || commande.getStatut() == StatutCommande.REFUSE
-                || commande.getStatut() == StatutCommande.NON_CONFIRMEE) {
-            throw new BusinessException("Impossible de marquer comme payée une commande avec le statut "
-                    + commande.getStatut());
+        // Align with state machine: only allow transition to PAYE from CONFIRME
+        if (commande.getStatut() != StatutCommande.CONFIRME) {
+            throw new BusinessException("La transition vers le statut PAYE n'est autorisée que depuis le statut CONFIRME (statut actuel : "
+                    + commande.getStatut() + ")");
         }
 
         commande.setStatut(StatutCommande.PAYE);
