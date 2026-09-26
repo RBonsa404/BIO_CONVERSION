@@ -1,6 +1,7 @@
 package com.bioconversion.utilisateur;
 
 import com.bioconversion.common.exception.BusinessException;
+import com.bioconversion.common.util.PhoneUtils;
 import com.bioconversion.config.AppProperties;
 import com.bioconversion.geo.Localisation;
 import com.bioconversion.security.JwtTokenProvider;
@@ -35,15 +36,18 @@ public class AuthService {
 
     @Transactional
     public AuthResponse authenticate(AuthRequest request) {
+        // Normalize phone number for lookup
+        String normalizedPhone = PhoneUtils.normalizeToE164(request.getTelephone());
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getTelephone(),
+                            normalizedPhone,
                             request.getMotDePasse()
                     )
             );
 
-            Utilisateur user = utilisateurRepository.findByTelephone(request.getTelephone())
+            Utilisateur user = utilisateurRepository.findByTelephone(normalizedPhone)
                     .orElseThrow(() -> new BusinessException("Utilisateur introuvable"));
 
             String token = tokenProvider.generateToken(user.getTelephone(), user.getRole(), user.getId());
@@ -57,7 +61,10 @@ public class AuthService {
 
     @Transactional
     public UtilisateurResponse registerProducteur(ProducteurRegisterRequest request) {
-        if (utilisateurRepository.existsByTelephone(request.getTelephone())) {
+        // Normalize phone number
+        String normalizedPhone = PhoneUtils.normalizeToE164(request.getTelephone());
+
+        if (utilisateurRepository.existsByTelephone(normalizedPhone)) {
             throw new BusinessException("Un compte existe déjà avec ce numéro de téléphone");
         }
 
@@ -66,7 +73,7 @@ public class AuthService {
         Producteur p = new Producteur();
         p.setNom(request.getNom());
         p.setPrenom(request.getPrenom());
-        p.setTelephone(request.getTelephone());
+        p.setTelephone(normalizedPhone);
         p.setMotDePasse(hashedPwd);
         p.setNomExploitation(request.getNomExploitation());
         p.setCapaciteProduction(request.getCapaciteProduction() != null ? request.getCapaciteProduction() : 0.0);
@@ -75,7 +82,7 @@ public class AuthService {
         Localisation loc = new Localisation();
         loc.setProvince(request.getProvince());
         loc.setVille(request.getVille());
-        
+
         if (request.getLatitude() != null && request.getLongitude() != null) {
             loc.setLatitude(request.getLatitude());
             loc.setLongitude(request.getLongitude());
@@ -92,7 +99,10 @@ public class AuthService {
 
     @Transactional
     public UtilisateurResponse registerEleveur(EleveurRegisterRequest request) {
-        if (utilisateurRepository.existsByTelephone(request.getTelephone())) {
+        // Normalize phone number
+        String normalizedPhone = PhoneUtils.normalizeToE164(request.getTelephone());
+
+        if (utilisateurRepository.existsByTelephone(normalizedPhone)) {
             throw new BusinessException("Un compte existe déjà avec ce numéro de téléphone");
         }
 
@@ -101,7 +111,7 @@ public class AuthService {
         Eleveur e = new Eleveur();
         e.setNom(request.getNom());
         e.setPrenom(request.getPrenom());
-        e.setTelephone(request.getTelephone());
+        e.setTelephone(normalizedPhone);
         e.setMotDePasse(hashedPwd);
         e.setTypeElevage(request.getTypeElevage());
         e.setAdresse(request.getAdresse());

@@ -7,6 +7,7 @@ import com.bioconversion.utilisateur.Eleveur;
 import com.bioconversion.utilisateur.EleveurRepository;
 import com.bioconversion.utilisateur.Producteur;
 import com.bioconversion.utilisateur.ProducteurRepository;
+import com.bioconversion.utilisateur.StatutUtilisateur;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -376,7 +378,7 @@ class MarketplaceServiceCommandeTest {
 
         when(commandeRepository.findById(20L)).thenReturn(Optional.of(commande));
         when(commandeRepository.save(any(Commande.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(producteurRepository.findByCompteValideTrue(any(Pageable.class))).thenReturn(Page.empty());
+        when(producteurRepository.findByStatut(eq(StatutUtilisateur.ACTIF), any(Pageable.class))).thenReturn(Page.empty());
 
         assertThrows(BusinessException.class, () ->
                 marketplaceService.confirmerCommande(20L, 1L));
@@ -403,7 +405,7 @@ class MarketplaceServiceCommandeTest {
                 .thenReturn(List.of(cmd1));
         when(commandeRepository.findById(101L)).thenReturn(Optional.of(cmd1));
         when(commandeRepository.save(any(Commande.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(producteurRepository.findByCompteValideTrue(any(Pageable.class))).thenReturn(Page.empty());
+        when(producteurRepository.findByStatut(eq(StatutUtilisateur.ACTIF), any(Pageable.class))).thenReturn(Page.empty());
 
         List<Commande> expirees = marketplaceService.expirerCommandesNonConfirmees();
 
