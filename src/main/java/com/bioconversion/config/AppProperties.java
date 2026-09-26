@@ -46,7 +46,9 @@ public record AppProperties(
 
                 @NotNull @Valid EntrepriseProperties entreprise,
 
-                PaiementProperties paiement
+                PaiementProperties paiement,
+
+                FacturesProperties factures
 
 ) {
 
@@ -61,6 +63,10 @@ public record AppProperties(
 
         public record UploadProperties(
                         String identiteDir) {
+        }
+
+        public record FacturesProperties(
+                        String dossier) {
         }
 
         /**

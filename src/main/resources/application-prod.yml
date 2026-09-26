@@ -25,6 +25,8 @@ app:
     taux: ${COMMISSION_TAUX:0.05}
   paiement:
     webhook-secret: ${WEBHOOK_SECRET}
+  factures:
+    dossier: ${FACTURES_DIR}
   entreprise:
     nom: ${ENTREPRISE_NOM:BIO CONVERSION}
     ifu: ${ENTREPRISE_IFU}

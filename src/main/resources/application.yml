@@ -46,6 +46,8 @@ app:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
   upload:
     identite-dir: ${UPLOAD_DIR:./uploads/identites}
+  factures:
+    dossier: ${FACTURES_DIR:./factures}
   commission:
     # C-MUST-5 : taux de commission plateforme, paramétrable côté administration.
     # Fraction du montant du paiement (0.05 = 5%), jamais codé en dur dans FactureService.

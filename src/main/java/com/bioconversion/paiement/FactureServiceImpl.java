@@ -35,8 +35,6 @@ import com.lowagie.text.*;
 @Slf4j
 public class FactureServiceImpl implements FactureService {
 
-    private static final String DOSSIER_FACTURES = "factures";
-
     private final FactureRepository factureRepository;
     private final AppProperties appProperties;
 
@@ -78,10 +76,14 @@ public class FactureServiceImpl implements FactureService {
 
     private String genererPdf(Facture facture, double montantCommission, double tauxCommission) {
     try {
-        Files.createDirectories(Paths.get(DOSSIER_FACTURES));
+        String dossierFactures = appProperties.factures() != null && appProperties.factures().dossier() != null
+                ? appProperties.factures().dossier()
+                : "factures";
+        
+        Files.createDirectories(Paths.get(dossierFactures));
 
         String nomFichier = facture.getReference() + ".pdf";
-        Path chemin = Paths.get(DOSSIER_FACTURES, nomFichier);
+        Path chemin = Paths.get(dossierFactures, nomFichier);
 
         var entreprise = appProperties.entreprise();
         var commande = facture.getPaiement().getCommande();
