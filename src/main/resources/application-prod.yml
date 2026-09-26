@@ -25,6 +25,8 @@ app:
     taux: ${COMMISSION_TAUX:0.05}
   paiement:
     webhook-secret: ${WEBHOOK_SECRET}
+  iot:
+    api-key: ${IOT_API_KEY}
   factures:
     dossier: ${FACTURES_DIR}
   entreprise:

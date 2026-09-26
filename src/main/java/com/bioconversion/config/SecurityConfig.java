@@ -1,6 +1,7 @@
 package com.bioconversion.config;
 
 import com.bioconversion.security.JwtAuthenticationFilter;
+import com.bioconversion.security.IotApiKeyFilter;
 import com.bioconversion.security.BioUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -48,6 +49,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final IotApiKeyFilter iotApiKeyFilter;
     private final BioUserDetailsService userDetailsService;
 
     @Bean
@@ -81,9 +83,9 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .permitAll()
 
-                        // ── Module A — IoT ────────────────────────────────
+                        // ── Module A — IoT — Uses API key authentication (not JWT)
                         .requestMatchers("/api/v1/iot/**")
-                        .hasAnyRole("PRODUCTEUR", "ADMINISTRATEUR")
+                        .permitAll()
 
                         // ── Module B — Marketplace ────────────────────────
                         .requestMatchers("/api/v1/marketplace/**")
@@ -107,6 +109,9 @@ public class SecurityConfig {
 
                 // Fournisseur d'authentification DAO
                 .authenticationProvider(authenticationProvider())
+
+                // Filtre IoT API key pour les endpoints IoT (avant JWT)
+                .addFilterBefore(iotApiKeyFilter, JwtAuthenticationFilter.class)
 
                 // Filtre JWT avant le filtre standard d'authentification
                 .addFilterBefore(jwtAuthenticationFilter,

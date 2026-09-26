@@ -54,6 +54,8 @@ app:
     taux: ${COMMISSION_TAUX:0.05}
   paiement:
     webhook-secret: ${WEBHOOK_SECRET:dev-secret-change-in-production}
+  iot:
+    api-key: ${IOT_API_KEY:dev-iot-api-key-change-in-production}
   entreprise:
     nom: "BIO CONVERSION"
     ifu: "IFU_PLACEHOLDER"
