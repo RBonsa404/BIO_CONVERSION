@@ -43,9 +43,7 @@ app:
     secret: ${JWT_SECRET:changeme-at-least-256-bits-long-for-hs256-algorithm-!!}
     expiration-ms: 86400000
   security:
-    allowed-origins:
-      - http://localhost:3000
-      - http://localhost:8080
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
   upload:
     identite-dir: ${UPLOAD_DIR:./uploads/identites}
   commission:

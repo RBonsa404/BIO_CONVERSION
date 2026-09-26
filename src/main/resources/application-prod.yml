@@ -18,7 +18,7 @@ app:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000
   security:
-    allowed-origins: ${ALLOWED_ORIGINS}
+    allowed-origins: ${ALLOWED_ORIGINS:}
   upload:
     identite-dir: ${UPLOAD_DIR}
   commission:

@@ -56,7 +56,7 @@ public record AppProperties(
         }
 
         public record SecurityProperties(
-                        List<String> allowedOrigins) {
+                        String allowedOrigins) {
         }
 
         public record UploadProperties(
