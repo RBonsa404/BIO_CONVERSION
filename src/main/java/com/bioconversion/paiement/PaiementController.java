@@ -4,6 +4,7 @@ import com.bioconversion.common.dto.ApiResponse;
 import com.bioconversion.paiement.dto.InitierPaiementRequest;
 import com.bioconversion.paiement.dto.PaiementResponse;
 import com.bioconversion.paiement.dto.WebhookPaiementRequest;
+import com.bioconversion.security.SecurityUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +34,13 @@ public class PaiementController {
     public ResponseEntity<ApiResponse<PaiementResponse>> initierPaiement(
             @Valid @RequestBody InitierPaiementRequest request) {
 
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         Paiement paiement = paiementService.initierPaiement(
-                request.idCommande(), request.operateur());
+                request.idCommande(), request.operateur(), currentUserId);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
@@ -87,7 +93,12 @@ public class PaiementController {
     public ResponseEntity<ApiResponse<PaiementResponse>> consulterParCommande(
             @PathVariable Long idCommande) {
 
-        Paiement paiement = paiementService.consulterParCommande(idCommande);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Paiement paiement = paiementService.consulterParCommande(idCommande, currentUserId);
 
         return ResponseEntity.ok(ApiResponse.success(PaiementResponse.from(paiement)));
     }

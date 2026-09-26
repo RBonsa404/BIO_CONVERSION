@@ -24,8 +24,12 @@ public interface FactureService {
      */
     Facture consulterParReference(String reference);
 
+    Facture consulterParReference(String reference, Long currentUserId);
+
     /**
      * Retourne les octets du PDF déjà généré sur disque pour cette facture.
      */
     byte[] telechargerPdf(String reference);
+
+    byte[] telechargerPdf(String reference, Long currentUserId);
 }

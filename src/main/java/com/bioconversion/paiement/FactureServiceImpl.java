@@ -312,8 +312,40 @@ private void ajouterLigneRecap(PdfPTable table, String label, double montant, Fo
     }
 
     @Override
+    public Facture consulterParReference(String reference, Long currentUserId) {
+        Facture facture = factureRepository.findByReference(reference)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucune facture pour la référence " + reference));
+
+        if (!facture.getPaiement().getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !facture.getPaiement().getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à consulter cette facture");
+        }
+
+        return facture;
+    }
+
+    @Override
     public byte[] telechargerPdf(String reference) {
         Facture facture = consulterParReference(reference);
+
+        if (facture.getCheminPdf() == null) {
+            throw new BusinessException(
+                    "Le PDF de la facture " + reference + " n'a pas encore été généré");
+        }
+
+        try {
+            return Files.readAllBytes(Path.of(facture.getCheminPdf()));
+        } catch (IOException e) {
+            throw new UncheckedIOException(
+                    "Impossible de lire le PDF de la facture " + reference, e);
+        }
+    }
+
+    @Override
+    public byte[] telechargerPdf(String reference, Long currentUserId) {
+        Facture facture = consulterParReference(reference, currentUserId);
 
         if (facture.getCheminPdf() == null) {
             throw new BusinessException(

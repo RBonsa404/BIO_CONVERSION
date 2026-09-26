@@ -63,6 +63,41 @@ public class PaiementServiceImpl implements PaiementService {
 
     @Override
     @Transactional
+    public Paiement initierPaiement(Long idCommande, String operateur, Long currentUserId) {
+        Commande commande = commandeRepository.findById(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Commande introuvable : " + idCommande));
+
+        if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à initier un paiement pour cette commande");
+        }
+
+        if (commande.getPaiement() != null) {
+            throw new BusinessException(
+                    "Un paiement existe déjà pour la commande " + idCommande);
+        }
+
+        double montant = commande.calculerMontantTotal();
+        if (montant <= 0) {
+            throw new BusinessException(
+                    "Impossible d'initier un paiement pour un montant nul ou négatif");
+        }
+
+        Paiement paiement = Paiement.builder()
+                .commande(commande)
+                .operateur(operateur)
+                .montant(montant)
+                .referenceTransaction(UUID.randomUUID().toString())
+                .datePaiement(OffsetDateTime.now())
+                .statutPaiement(StatutPaiement.EN_ATTENTE)
+                .build();
+
+        return paiementRepository.save(paiement);
+    }
+
+    @Override
+    @Transactional
     public Paiement traiterWebhookSucces(String referenceTransaction) {
         Paiement paiement = trouverParReference(referenceTransaction);
 
@@ -112,6 +147,21 @@ public class PaiementServiceImpl implements PaiementService {
         return paiementRepository.findByCommandeIdCommande(idCommande)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aucun paiement pour la commande " + idCommande));
+    }
+
+    @Override
+    public Paiement consulterParCommande(Long idCommande, Long currentUserId) {
+        Paiement paiement = paiementRepository.findByCommandeIdCommande(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun paiement pour la commande " + idCommande));
+
+        if (!paiement.getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !paiement.getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à consulter ce paiement");
+        }
+
+        return paiement;
     }
 
     private Paiement trouverParReference(String referenceTransaction) {

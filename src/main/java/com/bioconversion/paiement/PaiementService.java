@@ -16,6 +16,8 @@ public interface PaiementService {
      */
     Paiement initierPaiement(Long idCommande, String operateur);
 
+    Paiement initierPaiement(Long idCommande, String operateur, Long currentUserId);
+
     /**
      * C-MUST-2 / C-MUST-3 : traite la confirmation asynchrone reçue via webhook opérateur.
      * Idempotent : un paiement déjà CONFIRME n'est pas re-traité.
@@ -40,4 +42,6 @@ public interface PaiementService {
      * paiement est confirmé avant tout retrait.
      */
     Paiement consulterParCommande(Long idCommande);
+
+    Paiement consulterParCommande(Long idCommande, Long currentUserId);
 }

@@ -2,8 +2,10 @@ package com.bioconversion.paiement;
 
 import com.bioconversion.common.dto.ApiResponse;
 import com.bioconversion.paiement.dto.FactureResponse;
+import com.bioconversion.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +28,12 @@ public class FactureController {
     public ResponseEntity<ApiResponse<FactureResponse>> consulter(
             @PathVariable String reference) {
 
-        Facture facture = factureService.consulterParReference(reference);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Facture facture = factureService.consulterParReference(reference, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(FactureResponse.from(facture)));
     }
 
@@ -35,7 +42,12 @@ public class FactureController {
      */
     @GetMapping("/{reference}/telecharger")
     public ResponseEntity<byte[]> telecharger(@PathVariable String reference) {
-        byte[] pdf = factureService.telechargerPdf(reference);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        byte[] pdf = factureService.telechargerPdf(reference, currentUserId);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
@@ -51,7 +63,12 @@ public class FactureController {
      */
     @GetMapping("/{reference}/imprimer")
     public ResponseEntity<byte[]> imprimer(@PathVariable String reference) {
-        byte[] pdf = factureService.telechargerPdf(reference);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        byte[] pdf = factureService.telechargerPdf(reference, currentUserId);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)

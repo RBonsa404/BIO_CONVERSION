@@ -206,10 +206,51 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     }
 
     @Override
+    @Transactional
+    public Commande annulerCommande(Long commandeId, String motif, Long currentUserId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !commande.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à annuler cette commande");
+        }
+
+        if (commande.getStatut() == StatutCommande.LIVRE || commande.getStatut() == StatutCommande.EXPEDIE
+                || commande.getStatut() == StatutCommande.ANNULE || commande.getStatut() == StatutCommande.REFUSE
+                || commande.getStatut() == StatutCommande.NON_CONFIRMEE) {
+            throw new BusinessException("Impossible d'annuler une commande avec le statut " + commande.getStatut());
+        }
+
+        OffsetDateTime limite12h = commande.getDateCommande().plusHours(12);
+        if (OffsetDateTime.now().isAfter(limite12h)) {
+            throw new BusinessException("L'annulation automatique n'est plus possible au-delà de 12h après le passage de la commande. "
+                    + "Veuillez contacter le service client pour un traitement manuel (motif : "
+                    + (motif != null && !motif.isBlank() ? motif : "non précisé") + ").");
+        }
+
+        return changerStatutCommande(commandeId, StatutCommande.ANNULE);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Commande trouverCommandeParId(Long commandeId) {
         return commandeRepository.findById(commandeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Commande trouverCommandeParId(Long commandeId, Long currentUserId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !commande.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à accéder à cette commande");
+        }
+
+        return commande;
     }
 
     @Override
@@ -287,6 +328,20 @@ public class MarketplaceServiceImpl implements MarketplaceService {
 
     @Override
     @Transactional
+    public Produit modifierStock(Long produitId, double nouvelleQuantite, Long currentUserId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        
+        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
+        }
+        
+        produit.setQuantiteStock(nouvelleQuantite);
+        return produitRepository.save(produit);
+    }
+
+    @Override
+    @Transactional
     public Produit modifierPrix(Long produitId, double nouveauPrix) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
@@ -296,9 +351,37 @@ public class MarketplaceServiceImpl implements MarketplaceService {
 
     @Override
     @Transactional
+    public Produit modifierPrix(Long produitId, double nouveauPrix, Long currentUserId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        
+        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
+        }
+        
+        produit.setPrix(nouveauPrix);
+        return produitRepository.save(produit);
+    }
+
+    @Override
+    @Transactional
     public void retirerProduit(Long produitId) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        produit.setDisponibilite(false);
+        produitRepository.save(produit);
+    }
+
+    @Override
+    @Transactional
+    public void retirerProduit(Long produitId, Long currentUserId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        
+        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à retirer ce produit");
+        }
+        
         produit.setDisponibilite(false);
         produitRepository.save(produit);
     }
