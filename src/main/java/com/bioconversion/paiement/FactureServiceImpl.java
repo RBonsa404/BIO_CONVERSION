@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -57,7 +58,8 @@ public class FactureServiceImpl implements FactureService {
         // commission n'est jamais déduite de ce montant, elle n'apparaît que
         // comme ligne distincte dans le PDF généré ci-dessous.
         double tauxCommission = appProperties.commission().taux();
-        double montantCommission = paiement.getMontant() * tauxCommission;
+        BigDecimal montantCommission = paiement.getMontant()
+                .multiply(BigDecimal.valueOf(tauxCommission));
 
         Facture facture = Facture.builder()
                 .paiement(paiement)
@@ -74,7 +76,7 @@ public class FactureServiceImpl implements FactureService {
         return factureRepository.save(facture);
     }
 
-    private String genererPdf(Facture facture, double montantCommission, double tauxCommission) {
+    private String genererPdf(Facture facture, BigDecimal montantCommission, double tauxCommission) {
     try {
         String dossierFactures = appProperties.factures() != null && appProperties.factures().dossier() != null
                 ? appProperties.factures().dossier()
@@ -244,7 +246,7 @@ private void ajouterLigneGauche(PdfPTable table, String texte, Font police) {
     table.addCell(cellule);
 }
 
-private void ajouterLigneRecap(PdfPTable table, String label, double montant, Font police, boolean total) {
+private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant, Font police, boolean total) {
     PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
     celluleLabel.setBorder(total ? Rectangle.TOP : Rectangle.NO_BORDER);
     celluleLabel.setPadding(6);

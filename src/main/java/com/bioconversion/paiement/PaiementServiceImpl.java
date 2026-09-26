@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -46,8 +47,8 @@ public class PaiementServiceImpl implements PaiementService {
                     "Un paiement existe déjà pour la commande " + idCommande);
         }
 
-        double montant = commande.calculerMontantTotal();
-        if (montant <= 0) {
+        BigDecimal montant = commande.calculerMontantTotal();
+        if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(
                     "Impossible d'initier un paiement pour un montant nul ou négatif");
         }
@@ -85,8 +86,8 @@ public class PaiementServiceImpl implements PaiementService {
                     "Un paiement existe déjà pour la commande " + idCommande);
         }
 
-        double montant = commande.calculerMontantTotal();
-        if (montant <= 0) {
+        BigDecimal montant = commande.calculerMontantTotal();
+        if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(
                     "Impossible d'initier un paiement pour un montant nul ou négatif");
         }

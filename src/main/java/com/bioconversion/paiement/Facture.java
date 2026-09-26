@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
@@ -46,8 +47,8 @@ public class Facture {
     private OffsetDateTime dateFacture;
 
     @Positive(message = "Le montant de la facture doit être strictement positif")
-    @Column(name = "montant", nullable = false)
-    private double montant;
+    @Column(name = "montant", nullable = false, precision = 19, scale = 4)
+    private BigDecimal montant;
 
     @NotBlank
     @Column(name = "reference", nullable = false, unique = true, length = 255)

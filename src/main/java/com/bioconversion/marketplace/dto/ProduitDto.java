@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 /**
  * DTO représentant un Produit du catalogue (Larves ou Résidus) pour la consultation et les commandes.
  *
@@ -27,7 +29,7 @@ public class ProduitDto {
     private String nomExploitation;
     private String nomProduit;
     private double quantiteStock;
-    private double prix;
+    private BigDecimal prix;
     private TypeProduit typeProduit;
     private boolean disponibilite;
 }

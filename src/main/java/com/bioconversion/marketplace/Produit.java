@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
@@ -72,8 +73,8 @@ public class Produit {
     private double quantiteStock;
 
     @Positive(message = "Le prix doit être strictement positif")
-    @Column(name = "prix", nullable = false)
-    private double prix;
+    @Column(name = "prix", nullable = false, precision = 19, scale = 4)
+    private BigDecimal prix;
 
     /**
      * Type de produit (Larve ou Résidu/Déchet de production) — CDC §2.2.2 & B-MUST-5.
