@@ -44,7 +44,9 @@ public record AppProperties(
 
                 @NotNull @Valid CommissionProperties commission,
 
-                @NotNull @Valid EntrepriseProperties entreprise
+                @NotNull @Valid EntrepriseProperties entreprise,
+
+                PaiementProperties paiement
 
 ) {
 
@@ -85,5 +87,12 @@ public record AppProperties(
                         String email,
                         String banque,
                         String iban) {
+        }
+
+        /**
+         * Configuration du module de paiement, notamment la sécurité du webhook.
+         */
+        public record PaiementProperties(
+                        @NotBlank String webhookSecret) {
         }
 }

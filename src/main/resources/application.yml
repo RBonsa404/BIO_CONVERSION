@@ -52,3 +52,14 @@ app:
     # C-MUST-5 : taux de commission plateforme, paramétrable côté administration.
     # Fraction du montant du paiement (0.05 = 5%), jamais codé en dur dans FactureService.
     taux: ${COMMISSION_TAUX:0.05}
+  paiement:
+    webhook-secret: ${WEBHOOK_SECRET:dev-secret-change-in-production}
+  entreprise:
+    nom: "BIO CONVERSION"
+    ifu: "IFU_PLACEHOLDER"
+    rccm: "RCCM_PLACEHOLDER"
+    adresse: "Adresse placeholder"
+    telephone: "+226 00 00 00 00"
+    email: "contact@bioconversion.bf"
+    banque: "Bank placeholder"
+    iban: "IBAN_PLACEHOLDER"

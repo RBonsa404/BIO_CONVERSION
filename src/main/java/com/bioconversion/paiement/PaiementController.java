@@ -4,6 +4,7 @@ import com.bioconversion.common.dto.ApiResponse;
 import com.bioconversion.paiement.dto.InitierPaiementRequest;
 import com.bioconversion.paiement.dto.PaiementResponse;
 import com.bioconversion.paiement.dto.WebhookPaiementRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,9 @@ import org.springframework.web.bind.annotation.*;
 public class PaiementController {
 
     private final PaiementService paiementService;
+    private final WebhookSignatureVerifier signatureVerifier;
+    private final com.bioconversion.config.AppProperties appProperties;
+    private final ObjectMapper objectMapper;
 
     /**
      * C-MUST-1 : initie le règlement d'une commande.
@@ -41,25 +45,38 @@ public class PaiementController {
     /**
      * C-MUST-2 / C-MUST-3 : réception du webhook opérateur (succès ou échec).
      * Étapes 6/11 du diagramme de séquence. Appel asynchrone déclenché par l'opérateur,
-     * pas par l'éleveur — pas d'authentification utilisateur classique attendue ici
-     * (TODO sécurité : à durcir avec une vérification de signature/secret partagé avant
-     * la mise en production réelle — hors périmètre de la simulation C-MUST-1 actuelle).
+     * pas par l'éleveur — pas d'authentification utilisateur classique attendue ici.
+     * Sécurisé par vérification de signature HMAC-SHA256 (header X-Signature).
      */
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponse<PaiementResponse>> recevoirWebhook(
-            @Valid @RequestBody WebhookPaiementRequest request) {
+            @RequestHeader(value = "X-Signature", required = false) String signature,
+            @RequestBody String rawBody) {
 
-        Paiement paiement = switch (request.statut()) {
-            case SUCCES -> paiementService.traiterWebhookSucces(request.referenceTransaction());
-            case ECHEC -> paiementService.traiterWebhookEchec(request.referenceTransaction());
-        };
+        String webhookSecret = appProperties.paiement().webhookSecret();
+        if (!signatureVerifier.verifySignature(rawBody, signature, webhookSecret)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Signature webhook invalide"));
+        }
 
-        String message = request.statut() == WebhookPaiementRequest.StatutWebhook.SUCCES
-                ? "Paiement confirmé"
-                : "Échec du paiement enregistré";
+        try {
+            WebhookPaiementRequest request = objectMapper.readValue(rawBody, WebhookPaiementRequest.class);
 
-        return ResponseEntity.ok(
-                ApiResponse.success(PaiementResponse.from(paiement), message));
+            Paiement paiement = switch (request.statut()) {
+                case SUCCES -> paiementService.traiterWebhookSucces(request.referenceTransaction());
+                case ECHEC -> paiementService.traiterWebhookEchec(request.referenceTransaction());
+            };
+
+            String message = request.statut() == WebhookPaiementRequest.StatutWebhook.SUCCES
+                    ? "Paiement confirmé"
+                    : "Échec du paiement enregistré";
+
+            return ResponseEntity.ok(
+                    ApiResponse.success(PaiementResponse.from(paiement), message));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Format de requête webhook invalide"));
+        }
     }
 
     /**
