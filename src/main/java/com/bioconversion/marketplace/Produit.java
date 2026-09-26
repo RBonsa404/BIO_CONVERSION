@@ -49,6 +49,10 @@ public class Produit {
     @Column(name = "id")
     private Long idProduit;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "producteur_id", nullable = false)

@@ -11,6 +11,7 @@ import com.bioconversion.utilisateur.Producteur;
 import com.bioconversion.utilisateur.ProducteurRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -82,7 +83,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
             }
 
             // Décrémenter le stock via le canal exposé par OUATTARA
-            modifierStock(produitId, produit.getQuantiteStock() - quantite);
+            modifierStockWithRetry(produitId, produit.getQuantiteStock() - quantite, null, 3);
 
             // Créer la commande (statut initial EN_ATTENTE)
             Commande commande = Commande.builder()
@@ -301,7 +302,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 Produit p = ligne.getProduit();
                 if (p != null) {
                     double stockActuel = p.getQuantiteStock();
-                    modifierStock(p.getIdProduit(), stockActuel + ligne.getQuantite());
+                    modifierStockWithRetry(p.getIdProduit(), stockActuel + ligne.getQuantite(), null, 3);
                 }
             }
         }
@@ -320,24 +321,37 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     @Override
     @Transactional
     public Produit modifierStock(Long produitId, double nouvelleQuantite) {
-        Produit produit = produitRepository.findById(produitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
-        produit.setQuantiteStock(nouvelleQuantite);
-        return produitRepository.save(produit);
+        return modifierStockWithRetry(produitId, nouvelleQuantite, null, 3);
     }
 
     @Override
     @Transactional
     public Produit modifierStock(Long produitId, double nouvelleQuantite, Long currentUserId) {
-        Produit produit = produitRepository.findById(produitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
-        
-        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
+        return modifierStockWithRetry(produitId, nouvelleQuantite, currentUserId, 3);
+    }
+
+    private Produit modifierStockWithRetry(Long produitId, double nouvelleQuantite, Long currentUserId, int maxRetries) {
+        int attempts = 0;
+        while (attempts < maxRetries) {
+            try {
+                Produit produit = produitRepository.findById(produitId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+                
+                if (currentUserId != null && !produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+                    throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
+                }
+                
+                produit.setQuantiteStock(nouvelleQuantite);
+                return produitRepository.save(produit);
+            } catch (OptimisticLockingFailureException e) {
+                attempts++;
+                if (attempts >= maxRetries) {
+                    throw new BusinessException("Le produit a été modifié par une autre transaction. Veuillez réessayer.");
+                }
+                log.warn("Optimistic lock conflict on produit {}, attempt {}/{}", produitId, attempts, maxRetries);
+            }
         }
-        
-        produit.setQuantiteStock(nouvelleQuantite);
-        return produitRepository.save(produit);
+        throw new BusinessException("Échec de la modification du stock après " + maxRetries + " tentatives");
     }
 
     @Override
