@@ -23,7 +23,7 @@ public interface IotService {
     /**
      * Recherche les capteurs d'un producteur donné.
      */
-    List<Capteur> ObtenirCapteursProducteur(Long producteurId);
+    List<Capteur> obtenirCapteursProducteur(Long producteurId);
 
     /**
      * Active ou désactive un capteur IoT.

@@ -22,7 +22,7 @@ public class IotServiceImpl implements IotService {
     }
 
     @Override
-    public List<Capteur> ObtenirCapteursProducteur(Long producteurId) {
+    public List<Capteur> obtenirCapteursProducteur(Long producteurId) {
         // TODO: Retourner la liste des capteurs enregistrés du producteur
         return capteurRepository.findByProducteurIdUtilisateur(producteurId);
     }
