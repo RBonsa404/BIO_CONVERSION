@@ -71,7 +71,8 @@ public class Paiement {
     private OffsetDateTime createdAt;
 
     /** Référence de transaction retournée par l'API Orange Money. */
-    @Column(name = "reference_transaction", length = 255)
+    @NotBlank
+    @Column(name = "reference_transaction", nullable = false, length = 255, unique = true)
     private String referenceTransaction;
 
     @Column(name = "date_paiement", nullable = false)
