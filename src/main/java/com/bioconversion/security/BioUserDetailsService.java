@@ -1,5 +1,6 @@
 package com.bioconversion.security;
 
+import com.bioconversion.utilisateur.StatutUtilisateur;
 import com.bioconversion.utilisateur.Utilisateur;
 import com.bioconversion.utilisateur.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,13 +38,16 @@ public class BioUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "Utilisateur introuvable pour le téléphone : " + telephone));
 
+        boolean enabled = utilisateur.getStatut() == StatutUtilisateur.ACTIF;
+        boolean accountNonLocked = utilisateur.getStatut() != StatutUtilisateur.SUSPENDU;
+
         return new User(
                 utilisateur.getTelephone(),
                 utilisateur.getMotDePasse(),
-                utilisateur.getStatut().isActif(), // enabled
+                enabled, // enabled - only ACTIF users can login
                 true, // accountNonExpired
                 true, // credentialsNonExpired
-                !utilisateur.getStatut().isSuspendu(), // accountNonLocked
+                accountNonLocked, // accountNonLocked - SUSPENDU users are locked
                 List.of(new SimpleGrantedAuthority("ROLE_" + utilisateur.getRole())));
     }
 }

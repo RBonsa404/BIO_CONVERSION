@@ -432,7 +432,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .longitude(longitude)
                 .build();
 
-        return producteurRepository.findByCompteValideTrue(Pageable.unpaged()).getContent().stream()
+        return producteurRepository.findByStatut(com.bioconversion.utilisateur.StatutUtilisateur.ACTIF, Pageable.unpaged()).getContent().stream()
                 .filter(p -> p.getLocalisation() != null)
                 .map(p -> {
                     double dist = p.getLocalisation().calculerDistance(centreRecherche);

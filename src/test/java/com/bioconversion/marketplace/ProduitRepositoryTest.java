@@ -41,7 +41,6 @@ class ProduitRepositoryTest {
         Producteur producteur = Producteur.builder()
                 .nomExploitation("Ferme BSFL Ouaga")
                 .capaciteProduction(1000.0)
-                .compteValide(true)
                 .localisation(loc)
                 .nom("Ouedraogo")
                 .prenom("Jean")
