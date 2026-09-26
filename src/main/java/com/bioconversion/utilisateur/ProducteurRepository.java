@@ -17,7 +17,7 @@ public interface ProducteurRepository extends JpaRepository<Producteur, Long> {
      * Recherche les producteurs validés par province.
      * TODO Module D : implémenter la recherche géographique avancée.
      */
-    Page<Producteur> findByCompteValideTrue(Pageable pageable);
+    Page<Producteur> findByStatut(StatutUtilisateur statut, Pageable pageable);
 
     Page<Producteur> findByLocalisationProvinceIgnoreCase(String province, Pageable pageable);
 }

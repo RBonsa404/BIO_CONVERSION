@@ -6,8 +6,13 @@ import com.bioconversion.marketplace.Commande;
 import com.bioconversion.marketplace.CommandeRepository;
 import com.bioconversion.marketplace.CommandeService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -16,6 +21,7 @@ import java.util.UUID;
  * Implémentation du service métier Module C — Paiement Intégré (Orange Money).
  * CDC v1.1, C-MUST-1 à C-MUST-4.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaiementServiceImpl implements PaiementService {
@@ -26,6 +32,7 @@ public class PaiementServiceImpl implements PaiementService {
     private final PaiementRepository paiementRepository;
     private final FactureService factureService;
     private final CommandeService commandeService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -63,6 +70,41 @@ public class PaiementServiceImpl implements PaiementService {
 
     @Override
     @Transactional
+    public Paiement initierPaiement(Long idCommande, String operateur, Long currentUserId) {
+        Commande commande = commandeRepository.findById(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Commande introuvable : " + idCommande));
+
+        if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à initier un paiement pour cette commande");
+        }
+
+        if (commande.getPaiement() != null) {
+            throw new BusinessException(
+                    "Un paiement existe déjà pour la commande " + idCommande);
+        }
+
+        double montant = commande.calculerMontantTotal();
+        if (montant <= 0) {
+            throw new BusinessException(
+                    "Impossible d'initier un paiement pour un montant nul ou négatif");
+        }
+
+        Paiement paiement = Paiement.builder()
+                .commande(commande)
+                .operateur(operateur)
+                .montant(montant)
+                .referenceTransaction(UUID.randomUUID().toString())
+                .datePaiement(OffsetDateTime.now())
+                .statutPaiement(StatutPaiement.EN_ATTENTE)
+                .build();
+
+        return paiementRepository.save(paiement);
+    }
+
+    @Override
+    @Transactional
     public Paiement traiterWebhookSucces(String referenceTransaction) {
         Paiement paiement = trouverParReference(referenceTransaction);
 
@@ -75,20 +117,29 @@ public class PaiementServiceImpl implements PaiementService {
         paiement.confirmerPaiement(referenceTransaction);
         paiement = paiementRepository.save(paiement);
 
-        // C-MUST-5 : génération automatique de la facture après confirmation
-        // (diagramme de séquence "Validation et paiement", étape 7).
-        factureService.genererPourPaiement(paiement);
-
-        // TODO C-MUST-2 : notifier éleveur + producteur < 10s. Canal
-        // (SMS/WhatsApp) et responsabilité exacte à clarifier avec Module D
-        // (dispatch §6 point 1 — AlerteIoT reste dédiée aux capteurs d'après
-        // ZAREI Seybou). Non implémenté ici tant que ce n'est pas tranché.
-
         // Contrat officiel inter-modules (Module B — CommandeService) : notifie
         // le passage au statut PAYE, étape 7 du diagramme de séquence.
         commandeService.marquerCommandePayee(paiement.getCommande().getIdCommande());
 
+        // Publish event to trigger PDF generation after transaction commit
+        eventPublisher.publishEvent(new PaiementConfirmeEvent(this, paiement));
+
         return paiement;
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    public void genererFactureApresCommit(PaiementConfirmeEvent event) {
+        try {
+            // C-MUST-5 : génération automatique de la facture après confirmation
+            // (diagramme de séquence "Validation et paiement", étape 7).
+            factureService.genererPourPaiement(event.getPaiement());
+            log.info("Facture générée avec succès pour le paiement {}", event.getPaiement().getIdPaiement());
+        } catch (Exception e) {
+            log.error("Échec de la génération de la facture pour le paiement {} - le paiement reste confirmé", 
+                    event.getPaiement().getIdPaiement(), e);
+            // PDF generation failure should not rollback the payment confirmation
+        }
     }
 
     @Override
@@ -112,6 +163,21 @@ public class PaiementServiceImpl implements PaiementService {
         return paiementRepository.findByCommandeIdCommande(idCommande)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aucun paiement pour la commande " + idCommande));
+    }
+
+    @Override
+    public Paiement consulterParCommande(Long idCommande, Long currentUserId) {
+        Paiement paiement = paiementRepository.findByCommandeIdCommande(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun paiement pour la commande " + idCommande));
+
+        if (!paiement.getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !paiement.getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à consulter ce paiement");
+        }
+
+        return paiement;
     }
 
     private Paiement trouverParReference(String referenceTransaction) {

@@ -1,12 +1,15 @@
 package com.bioconversion.marketplace;
 
 import com.bioconversion.common.dto.ApiResponse;
+import com.bioconversion.common.exception.UnauthorizedException;
 import com.bioconversion.marketplace.dto.CommandeDto;
 import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
 import com.bioconversion.marketplace.dto.ProduitDto;
+import com.bioconversion.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -27,34 +30,56 @@ public class MarketplaceController {
     }
 
     @PostMapping("/produits")
-    public ResponseEntity<ApiResponse<Produit>> publierProduit(@RequestBody Produit produit,
-                                                                 @RequestParam Long producteurId) {
-        Produit cree = marketplaceService.publierProduit(produit, producteurId);
+    public ResponseEntity<ApiResponse<Produit>> publierProduit(@RequestBody Produit produit) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Produit cree = marketplaceService.publierProduit(produit, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(cree, "Produit publié"));
     }
 
     @PatchMapping("/produits/{produitId}/stock")
     public ResponseEntity<ApiResponse<Produit>> modifierStock(@PathVariable Long produitId,
                                                                 @RequestParam double nouvelleQuantite) {
-        Produit maj = marketplaceService.modifierStock(produitId, nouvelleQuantite);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Produit maj = marketplaceService.modifierStock(produitId, nouvelleQuantite, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(maj, "Stock mis à jour"));
     }
 
     @PatchMapping("/produits/{produitId}/prix")
     public ResponseEntity<ApiResponse<Produit>> modifierPrix(@PathVariable Long produitId,
                                                                @RequestParam double nouveauPrix) {
-        Produit maj = marketplaceService.modifierPrix(produitId, nouveauPrix);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Produit maj = marketplaceService.modifierPrix(produitId, nouveauPrix, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(maj, "Prix mis à jour"));
     }
 
     @DeleteMapping("/produits/{produitId}")
     public ResponseEntity<ApiResponse<Void>> retirerProduit(@PathVariable Long produitId) {
-        marketplaceService.retirerProduit(produitId);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        marketplaceService.retirerProduit(produitId, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(null, "Produit retiré"));
     }
 
     @GetMapping("/produits/producteur/{producteurId}")
     public ResponseEntity<ApiResponse<List<ProduitDto>>> consulterCatalogueProducteur(@PathVariable Long producteurId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!currentUserId.equals(producteurId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         List<ProduitDto> catalogue = marketplaceService.consulterCatalogueProducteurDto(producteurId);
         return ResponseEntity.ok(ApiResponse.success(catalogue));
     }
@@ -87,9 +112,14 @@ public class MarketplaceController {
     public ResponseEntity<ApiResponse<CommandeDto>> passerCommande(
             @jakarta.validation.Valid @RequestBody com.bioconversion.marketplace.dto.PasserCommandeRequest request,
             @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyHeader) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
         String key = idempotencyHeader != null ? idempotencyHeader : request.getIdempotencyKey();
         Commande commande = marketplaceService.passerCommande(
-                request.getEleveurId(),
+                currentUserId,
                 request.getProduitId(),
                 request.getQuantite(),
                 key);
@@ -106,9 +136,12 @@ public class MarketplaceController {
 
     @PostMapping("/commandes/{commandeId}/confirmer")
     public ResponseEntity<ApiResponse<CommandeDto>> confirmerCommande(
-            @PathVariable Long commandeId,
-            @RequestParam(required = false) Long producteurId) {
-        Commande commande = marketplaceService.confirmerCommande(commandeId, producteurId);
+            @PathVariable Long commandeId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Commande commande = marketplaceService.confirmerCommande(commandeId, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande confirmée avec succès"));
     }
 
@@ -116,13 +149,21 @@ public class MarketplaceController {
     public ResponseEntity<ApiResponse<CommandeDto>> annulerCommande(
             @PathVariable Long commandeId,
             @RequestParam(required = false) String motif) {
-        Commande commande = marketplaceService.annulerCommande(commandeId, motif);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Commande commande = marketplaceService.annulerCommande(commandeId, motif, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande annulée avec succès"));
     }
 
     @GetMapping("/commandes/{commandeId}")
     public ResponseEntity<ApiResponse<CommandeDto>> obtenirCommande(@PathVariable Long commandeId) {
-        Commande commande = marketplaceService.trouverCommandeParId(commandeId);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Commande commande = marketplaceService.trouverCommandeParId(commandeId, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande)));
     }
 
@@ -130,6 +171,13 @@ public class MarketplaceController {
     public ResponseEntity<ApiResponse<Page<CommandeDto>>> listerCommandesEleveur(
             @PathVariable Long eleveurId,
             Pageable pageable) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!currentUserId.equals(eleveurId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         Page<Commande> page = marketplaceService.listerCommandesEleveur(eleveurId, pageable);
         Page<CommandeDto> dtoPage = page.map(CommandeDto::fromEntity);
         return ResponseEntity.ok(ApiResponse.success(dtoPage));
@@ -139,6 +187,13 @@ public class MarketplaceController {
     public ResponseEntity<ApiResponse<Page<CommandeDto>>> listerCommandesProducteur(
             @PathVariable Long producteurId,
             Pageable pageable) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!currentUserId.equals(producteurId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         Page<Commande> page = marketplaceService.listerCommandesProducteur(producteurId, pageable);
         Page<CommandeDto> dtoPage = page.map(CommandeDto::fromEntity);
         return ResponseEntity.ok(ApiResponse.success(dtoPage));

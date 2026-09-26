@@ -66,14 +66,6 @@ public class Producteur extends Utilisateur {
     private double capaciteProduction;
 
     /**
-     * Indique si le compte producteur a été validé par un administrateur (CDC
-     * §2.2.1).
-     * Un compte non validé ne peut pas publier de produits.
-     */
-    @Column(name = "compte_valide", nullable = false)
-    private boolean compteValide = false;
-
-    /**
      * Localisation de l'exploitation — OBLIGATOIRE (cardinalité 1..1 du diagramme).
      * Contrôle côté DB : colonne {@code localisation_id NOT NULL} dans
      * {@code producteur}.
@@ -103,14 +95,6 @@ public class Producteur extends Utilisateur {
      */
     @OneToMany(mappedBy = "producteur")
     private List<Commande> commandes = new ArrayList<>();
-
-    public Boolean getEstValide() {
-        return compteValide;
-    }
-
-    public void setEstValide(boolean estValide) {
-        this.compteValide = estValide;
-    }
 
     @Override
     public String getRole() {

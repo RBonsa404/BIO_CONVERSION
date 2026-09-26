@@ -22,7 +22,6 @@ public class UtilisateurResponse {
     private OffsetDateTime dateCreation;
 
     // Champs spécifiques optionnels
-    private Boolean estValide;       // Producteur
     private String matricule;        // Administrateur
     private Double latitude;
     private Double longitude;
@@ -38,7 +37,6 @@ public class UtilisateurResponse {
                 .dateCreation(utilisateur.getDateCreation());
 
         if (utilisateur instanceof Producteur p) {
-            builder.estValide(p.getEstValide());
             if (p.getLocalisation() != null) {
                 builder.latitude(p.getLocalisation().getLatitude());
                 builder.longitude(p.getLocalisation().getLongitude());

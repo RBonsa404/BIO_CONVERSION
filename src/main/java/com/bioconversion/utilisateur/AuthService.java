@@ -10,6 +10,10 @@ import com.bioconversion.utilisateur.dto.EleveurRegisterRequest;
 import com.bioconversion.utilisateur.dto.ProducteurRegisterRequest;
 import com.bioconversion.utilisateur.dto.UtilisateurResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,24 +31,28 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final AppProperties appProperties;
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     public AuthResponse authenticate(AuthRequest request) {
-        Utilisateur user = utilisateurRepository.findByTelephone(request.getTelephone())
-                .orElseThrow(() -> new BusinessException("Numéro de téléphone ou mot de passe incorrect"));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getTelephone(),
+                            request.getMotDePasse()
+                    )
+            );
 
-        if (!passwordEncoder.matches(request.getMotDePasse(), user.getMotDePasse())) {
+            Utilisateur user = utilisateurRepository.findByTelephone(request.getTelephone())
+                    .orElseThrow(() -> new BusinessException("Utilisateur introuvable"));
+
+            String token = tokenProvider.generateToken(user.getTelephone(), user.getRole(), user.getId());
+            long expiration = appProperties.jwt().expirationMs();
+
+            return AuthResponse.of(token, expiration, UtilisateurResponse.from(user));
+        } catch (AuthenticationException e) {
             throw new BusinessException("Numéro de téléphone ou mot de passe incorrect");
         }
-
-        if (user.getStatut() == StatutUtilisateur.SUSPENDU) {
-            throw new BusinessException("Compte suspendu. Veuillez contacter l'administrateur.");
-        }
-
-        String token = tokenProvider.generateToken(user.getTelephone(), user.getRole(), user.getId());
-        long expiration = appProperties.jwt().expirationMs();
-
-        return AuthResponse.of(token, expiration, UtilisateurResponse.from(user));
     }
 
     @Transactional
@@ -62,20 +70,19 @@ public class AuthService {
         p.setMotDePasse(hashedPwd);
         p.setNomExploitation(request.getNomExploitation());
         p.setCapaciteProduction(request.getCapaciteProduction() != null ? request.getCapaciteProduction() : 0.0);
-        p.setEstValide(false); // CDC §2.2.3 — Validation par l'Admin requise
+        p.setStatut(StatutUtilisateur.EN_ATTENTE_VALIDATION); // CDC §2.2.3 — Validation par l'Admin requise
 
         Localisation loc = new Localisation();
+        loc.setProvince(request.getProvince());
+        loc.setVille(request.getVille());
+        
         if (request.getLatitude() != null && request.getLongitude() != null) {
             loc.setLatitude(request.getLatitude());
             loc.setLongitude(request.getLongitude());
-            loc.setProvince(request.getProvince());
-            loc.setVille(request.getVille());
         } else {
             // Localisation minimale par défaut si non spécifiée à la création
             loc.setLatitude(12.3714); // Ouagadougou par défaut
             loc.setLongitude(-1.5197);
-            loc.setProvince(request.getProvince());
-            loc.setVille(request.getVille());
         }
         p.setLocalisation(loc);
 
@@ -101,10 +108,10 @@ public class AuthService {
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
             Localisation loc = new Localisation();
-            loc.setLatitude(request.getLatitude());
-            loc.setLongitude(request.getLongitude());
             loc.setProvince(request.getProvince());
             loc.setVille(request.getVille());
+            loc.setLatitude(request.getLatitude());
+            loc.setLongitude(request.getLongitude());
             e.setLocalisation(loc);
         }
 

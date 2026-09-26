@@ -19,7 +19,7 @@ public class ReseauProducteurServiceImpl implements ReseauProducteurService {
 
     @Override
     public Page<Producteur> listerProducteursValides(Pageable pageable) {
-        return producteurRepository.findByCompteValideTrue(pageable);
+        return producteurRepository.findByStatut(StatutUtilisateur.ACTIF, pageable);
     }
 
     @Override
@@ -32,7 +32,14 @@ public class ReseauProducteurServiceImpl implements ReseauProducteurService {
     public Producteur validerProducteur(Long producteurId, boolean approuve) {
         Producteur p = producteurRepository.findById(producteurId)
                 .orElseThrow(() -> new ResourceNotFoundException("Producteur non trouvé avec l'id : " + producteurId));
-        p.setEstValide(approuve);
+        
+        // Use Utilisateur.statut as single source of truth instead of Producteur.compteValide
+        if (approuve) {
+            p.setStatut(StatutUtilisateur.ACTIF);
+        } else {
+            p.setStatut(StatutUtilisateur.EN_ATTENTE_VALIDATION);
+        }
+        
         return producteurRepository.save(p);
     }
 

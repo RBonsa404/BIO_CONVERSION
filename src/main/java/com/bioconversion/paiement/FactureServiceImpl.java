@@ -35,8 +35,6 @@ import com.lowagie.text.*;
 @Slf4j
 public class FactureServiceImpl implements FactureService {
 
-    private static final String DOSSIER_FACTURES = "factures";
-
     private final FactureRepository factureRepository;
     private final AppProperties appProperties;
 
@@ -78,10 +76,14 @@ public class FactureServiceImpl implements FactureService {
 
     private String genererPdf(Facture facture, double montantCommission, double tauxCommission) {
     try {
-        Files.createDirectories(Paths.get(DOSSIER_FACTURES));
+        String dossierFactures = appProperties.factures() != null && appProperties.factures().dossier() != null
+                ? appProperties.factures().dossier()
+                : "factures";
+        
+        Files.createDirectories(Paths.get(dossierFactures));
 
         String nomFichier = facture.getReference() + ".pdf";
-        Path chemin = Paths.get(DOSSIER_FACTURES, nomFichier);
+        Path chemin = Paths.get(dossierFactures, nomFichier);
 
         var entreprise = appProperties.entreprise();
         var commande = facture.getPaiement().getCommande();
@@ -269,39 +271,11 @@ private void ajouterLigneRecap(PdfPTable table, String label, double montant, Fo
         return table;
     }
 
-    private void ajouterLigneInfo(PdfPTable table, String label, String valeur, Font policeLabel, Font policeValeur) {
-        PdfPCell celluleLabel = new PdfPCell(new Phrase(label, policeLabel));
-        celluleLabel.setBorder(Rectangle.NO_BORDER);
-        celluleLabel.setPaddingBottom(4);
-
-        PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, policeValeur));
-        celluleValeur.setBorder(Rectangle.NO_BORDER);
-        celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        celluleValeur.setPaddingBottom(4);
-
-        table.addCell(celluleLabel);
-        table.addCell(celluleValeur);
-    }
-
     private void ajouterEnteteTableau(PdfPTable table, String texte, Color fond, Font police) {
         PdfPCell cellule = new PdfPCell(new Phrase(texte, police));
         cellule.setBackgroundColor(fond);
         cellule.setPadding(8);
         table.addCell(cellule);
-    }
-
-    private void ajouterLigneTableau(PdfPTable table, String label, String valeur, Font police) {
-        PdfPCell celluleLabel = new PdfPCell(new Phrase(label, police));
-        celluleLabel.setPadding(8);
-        celluleLabel.setBorderColor(Color.LIGHT_GRAY);
-
-        PdfPCell celluleValeur = new PdfPCell(new Phrase(valeur, police));
-        celluleValeur.setPadding(8);
-        celluleValeur.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        celluleValeur.setBorderColor(Color.LIGHT_GRAY);
-
-        table.addCell(celluleLabel);
-        table.addCell(celluleValeur);
     }
 
     @Override
@@ -312,8 +286,40 @@ private void ajouterLigneRecap(PdfPTable table, String label, double montant, Fo
     }
 
     @Override
+    public Facture consulterParReference(String reference, Long currentUserId) {
+        Facture facture = factureRepository.findByReference(reference)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucune facture pour la référence " + reference));
+
+        if (!facture.getPaiement().getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !facture.getPaiement().getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à consulter cette facture");
+        }
+
+        return facture;
+    }
+
+    @Override
     public byte[] telechargerPdf(String reference) {
         Facture facture = consulterParReference(reference);
+
+        if (facture.getCheminPdf() == null) {
+            throw new BusinessException(
+                    "Le PDF de la facture " + reference + " n'a pas encore été généré");
+        }
+
+        try {
+            return Files.readAllBytes(Path.of(facture.getCheminPdf()));
+        } catch (IOException e) {
+            throw new UncheckedIOException(
+                    "Impossible de lire le PDF de la facture " + reference, e);
+        }
+    }
+
+    @Override
+    public byte[] telechargerPdf(String reference, Long currentUserId) {
+        Facture facture = consulterParReference(reference, currentUserId);
 
         if (facture.getCheminPdf() == null) {
             throw new BusinessException(

@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:bioconversion_db}
     username: ${DB_USER:bioconversion}
-    password: ${DB_PASSWORD:secret}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -12,3 +12,27 @@ logging:
   level:
     com.bioconversion: INFO
     org.springframework.security: WARN
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: 86400000
+  security:
+    allowed-origins: ${ALLOWED_ORIGINS:}
+  upload:
+    identite-dir: ${UPLOAD_DIR}
+  commission:
+    taux: ${COMMISSION_TAUX:0.05}
+  paiement:
+    webhook-secret: ${WEBHOOK_SECRET}
+  factures:
+    dossier: ${FACTURES_DIR}
+  entreprise:
+    nom: ${ENTREPRISE_NOM:BIO CONVERSION}
+    ifu: ${ENTREPRISE_IFU}
+    rccm: ${ENTREPRISE_RCCM}
+    adresse: ${ENTREPRISE_ADRESSE}
+    telephone: ${ENTREPRISE_TELEPHONE}
+    email: ${ENTREPRISE_EMAIL}
+    banque: ${ENTREPRISE_BANQUE}
+    iban: ${ENTREPRISE_IBAN}

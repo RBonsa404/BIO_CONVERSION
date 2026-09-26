@@ -95,7 +95,7 @@ public class Commande {
      * Le paiement est créé lors de la confirmation ou du passage à la caisse.
      * TODO Module C — lier au PaiementService.
      */
-    @OneToOne(mappedBy = "commande", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "commande", cascade = CascadeType.ALL)
     private Paiement paiement;
 
     @CreationTimestamp

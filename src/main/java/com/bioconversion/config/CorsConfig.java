@@ -33,11 +33,13 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Origines autorisées depuis la configuration
-        List<String> allowedOrigins = appProperties.security() != null
+        // Origines autorisées depuis la configuration (comma-separated string)
+        String allowedOriginsStr = appProperties.security() != null
                 && appProperties.security().allowedOrigins() != null
                         ? appProperties.security().allowedOrigins()
-                        : List.of("http://localhost:3000");
+                        : "http://localhost:3000";
+
+        List<String> allowedOrigins = List.of(allowedOriginsStr.split(","));
 
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
