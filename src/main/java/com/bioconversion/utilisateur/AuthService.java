@@ -73,17 +73,16 @@ public class AuthService {
         p.setStatut(StatutUtilisateur.EN_ATTENTE_VALIDATION); // CDC §2.2.3 — Validation par l'Admin requise
 
         Localisation loc = new Localisation();
+        loc.setProvince(request.getProvince());
+        loc.setVille(request.getVille());
+        
         if (request.getLatitude() != null && request.getLongitude() != null) {
             loc.setLatitude(request.getLatitude());
             loc.setLongitude(request.getLongitude());
-            loc.setProvince(request.getProvince());
-            loc.setVille(request.getVille());
         } else {
             // Localisation minimale par défaut si non spécifiée à la création
             loc.setLatitude(12.3714); // Ouagadougou par défaut
             loc.setLongitude(-1.5197);
-            loc.setProvince(request.getProvince());
-            loc.setVille(request.getVille());
         }
         p.setLocalisation(loc);
 
@@ -109,10 +108,10 @@ public class AuthService {
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
             Localisation loc = new Localisation();
-            loc.setLatitude(request.getLatitude());
-            loc.setLongitude(request.getLongitude());
             loc.setProvince(request.getProvince());
             loc.setVille(request.getVille());
+            loc.setLatitude(request.getLatitude());
+            loc.setLongitude(request.getLongitude());
             e.setLocalisation(loc);
         }
 
