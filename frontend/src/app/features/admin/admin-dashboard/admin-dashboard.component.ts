@@ -2,12 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService } from '../../../core/services/admin.service';
 import { ProducteurProfile } from '../../../core/services/marketplace.service';
+import { SidebarLayoutComponent } from '../../../layouts/sidebar-layout/sidebar-layout.component';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SidebarLayoutComponent],
   template: `
+    <app-sidebar-layout area="admin">
     <main class="min-h-screen bg-cream p-8">
       <div class="max-w-5xl mx-auto">
         <header class="mb-8">
@@ -60,6 +62,7 @@ import { ProducteurProfile } from '../../../core/services/marketplace.service';
         </section>
       </div>
     </main>
+    </app-sidebar-layout>
   `
 })
 export class AdminDashboardComponent implements OnInit {
