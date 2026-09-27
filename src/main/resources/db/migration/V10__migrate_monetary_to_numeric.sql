@@ -14,4 +14,4 @@ ALTER TABLE ligne_commande ALTER COLUMN prix_unitaire_fige TYPE NUMERIC(19,4);
 ALTER TABLE facture ALTER COLUMN montant TYPE NUMERIC(19,4);
 
 -- Note: quantite_stock remains DOUBLE PRECISION as per business decision (larvae sold by weight in kg)
--- Note: ligne_commande.quantite remains INT (quantity is a count, not a weight)
+-- Note: ligne_commande.quantite is DOUBLE PRECISION because quantities are weights in kg
