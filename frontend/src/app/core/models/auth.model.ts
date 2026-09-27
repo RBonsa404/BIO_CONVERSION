@@ -8,6 +8,30 @@ export interface AuthResponse {
   utilisateur: UtilisateurInfo;
 }
 
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export interface BackendAuthResponse {
+  token: string;
+  tokenType: string;
+  expiresInMs: number;
+  user: BackendUtilisateurInfo;
+}
+
+export interface BackendUtilisateurInfo {
+  id: number;
+  nom: string;
+  prenom: string;
+  telephone: string;
+  role: string;
+  statut: string;
+  nomExploitation?: string;
+  capaciteProduction?: number;
+}
+
 export interface UtilisateurInfo {
   idUtilisateur: number;
   nom: string;
@@ -15,6 +39,8 @@ export interface UtilisateurInfo {
   telephone: string;
   role: string;
   statut: string;
+  nomExploitation?: string;
+  capaciteProduction?: number;
 }
 
 export interface ProducteurRegisterRequest {

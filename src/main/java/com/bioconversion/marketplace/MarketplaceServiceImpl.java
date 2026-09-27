@@ -43,6 +43,21 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<ProduitDto> listerProduitsDisponiblesDto(Pageable pageable) {
+        return produitRepository.findByDisponibiliteTrue(pageable).map(this::versProduitDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProduitDto obtenirProduitDto(Long produitId) {
+        Produit produit = produitRepository.findById(produitId)
+                .filter(Produit::isDisponibilite)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit indisponible : " + produitId));
+        return versProduitDto(produit);
+    }
+
+    @Override
     @Transactional
     public Produit ajouterProduit(Produit produit, Long producteurId) {
         return publierProduit(produit, producteurId);
@@ -183,6 +198,23 @@ public class MarketplaceServiceImpl implements MarketplaceService {
         }
 
         return changerStatutCommande(commandeId, StatutCommande.CONFIRME);
+    }
+
+    @Override
+    @Transactional
+    public Commande refuserCommande(Long commandeId, Long producteurId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (producteurId == null || !commande.getProducteur().getIdUtilisateur().equals(producteurId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Seul le producteur assigné à cette commande peut la refuser");
+        }
+        if (commande.getStatut() != StatutCommande.EN_ATTENTE) {
+            throw new BusinessException("Seule une commande EN_ATTENTE peut être refusée");
+        }
+
+        return changerStatutCommande(commandeId, StatutCommande.REFUSE);
     }
 
     @Override
@@ -411,17 +443,22 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     @Transactional(readOnly = true)
     public List<ProduitDto> consulterCatalogueProducteurDto(Long producteurId) {
         return produitRepository.findByProducteurIdUtilisateur(producteurId).stream()
-                .map(p -> ProduitDto.builder()
-                        .idProduit(p.getIdProduit())
-                        .producteurId(p.getProducteur().getIdUtilisateur())
-                        .nomExploitation(p.getProducteur().getNomExploitation())
-                        .nomProduit(p.getNomProduit())
-                        .quantiteStock(p.getQuantiteStock())
-                        .prix(p.getPrix())
-                        .typeProduit(p.getTypeProduit())
-                        .disponibilite(p.isDisponibilite())
-                        .build())
+                .filter(Produit::isDisponibilite)
+                .map(this::versProduitDto)
                 .collect(Collectors.toList());
+    }
+
+    private ProduitDto versProduitDto(Produit produit) {
+        return ProduitDto.builder()
+                .idProduit(produit.getIdProduit())
+                .producteurId(produit.getProducteur().getIdUtilisateur())
+                .nomExploitation(produit.getProducteur().getNomExploitation())
+                .nomProduit(produit.getNomProduit())
+                .quantiteStock(produit.getQuantiteStock())
+                .prix(produit.getPrix())
+                .typeProduit(produit.getTypeProduit())
+                .disponibilite(produit.isDisponibilite())
+                .build();
     }
 
     @Override
@@ -490,4 +527,3 @@ public class MarketplaceServiceImpl implements MarketplaceService {
         return commandeRepository.save(commande);
     }
 }
-

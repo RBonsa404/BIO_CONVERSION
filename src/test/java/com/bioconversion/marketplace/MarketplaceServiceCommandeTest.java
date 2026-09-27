@@ -352,6 +352,31 @@ class MarketplaceServiceCommandeTest {
     }
 
     @Test
+    @DisplayName("Le producteur assigné peut refuser une commande en attente")
+    void refuserCommande_ProducteurAssigne_RestitueLeStock() {
+        LigneCommande ligne = LigneCommande.builder()
+                .produit(produit)
+                .quantite(5.0)
+                .build();
+        Commande commande = Commande.builder()
+                .idCommande(21L)
+                .producteur(producteur)
+                .statut(StatutCommande.EN_ATTENTE)
+                .lignes(new ArrayList<>(List.of(ligne)))
+                .build();
+
+        when(commandeRepository.findById(21L)).thenReturn(Optional.of(commande));
+        when(commandeRepository.save(any(Commande.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(produitRepository.findById(100L)).thenReturn(Optional.of(produit));
+        when(produitRepository.save(any(Produit.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Commande refusee = marketplaceService.refuserCommande(21L, 1L);
+
+        assertEquals(StatutCommande.REFUSE, refusee.getStatut());
+        assertEquals(55.0, produit.getQuantiteStock());
+    }
+
+    @Test
     @DisplayName("Devrait rejeter la confirmation par un producteur non assigné")
     void confirmerCommande_ProducteurNonAssigne_LeveException() {
         Commande commande = Commande.builder()

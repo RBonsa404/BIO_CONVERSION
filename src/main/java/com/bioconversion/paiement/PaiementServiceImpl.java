@@ -181,6 +181,16 @@ public class PaiementServiceImpl implements PaiementService {
         return paiement;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal totalPaiementsConfirmesProducteur(Long producteurId, Long currentUserId) {
+        if (producteurId == null || !producteurId.equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.UnauthorizedException(
+                    "Vous n'êtes pas autorisé à consulter ce solde");
+        }
+        return paiementRepository.sumConfirmedPaymentsByProducteurId(producteurId);
+    }
+
     private Paiement trouverParReference(String referenceTransaction) {
         return paiementRepository.findByReferenceTransaction(referenceTransaction)
                 .orElseThrow(() -> new ResourceNotFoundException(

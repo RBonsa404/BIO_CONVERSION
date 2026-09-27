@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
-import { AuthRequest, AuthResponse, UtilisateurInfo } from '../models/auth.model';
+import { Observable, BehaviorSubject, map, tap } from 'rxjs';
+import { ApiResponse, AuthRequest, AuthResponse, BackendAuthResponse, UtilisateurInfo } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -19,7 +19,11 @@ export class AuthService {
   }
 
   login(credentials: AuthRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/api/v1/auth/login`, credentials).pipe(
+    return this.http.post<ApiResponse<BackendAuthResponse>>(`${this.apiUrl}/api/v1/auth/login`, credentials).pipe(
+      map(response => ({
+        token: response.data.token,
+        utilisateur: this.mapUser(response.data.user)
+      })),
       tap(response => {
         this.setToken(response.token);
         this.currentUserSubject.next(response.utilisateur);
@@ -28,6 +32,19 @@ export class AuthService {
         localStorage.setItem('currentUser', JSON.stringify(response.utilisateur));
       })
     );
+  }
+
+  private mapUser(user: BackendAuthResponse['user']): UtilisateurInfo {
+    return {
+      idUtilisateur: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      telephone: user.telephone,
+      role: user.role,
+      statut: user.statut,
+      nomExploitation: user.nomExploitation,
+      capaciteProduction: user.capaciteProduction
+    };
   }
 
   registerProducteur(data: any): Observable<any> {

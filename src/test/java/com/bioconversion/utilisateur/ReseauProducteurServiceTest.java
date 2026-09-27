@@ -86,8 +86,8 @@ class ReseauProducteurServiceTest {
     }
 
     @Test
-    @DisplayName("Refuser un producteur garde le statut EN_ATTENTE_VALIDATION")
-    void validerProducteur_Reject_KeepsStatusEnAttente() {
+    @DisplayName("Refuser un producteur définit son statut à REFUSE")
+    void validerProducteur_Reject_ChangesStatusToRefuse() {
         // Given
         when(producteurRepository.findById(1L)).thenReturn(Optional.of(producteur));
         when(producteurRepository.save(any(Producteur.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -97,7 +97,7 @@ class ReseauProducteurServiceTest {
 
         // Then
         assertNotNull(result);
-        assertEquals(StatutUtilisateur.EN_ATTENTE_VALIDATION, result.getStatut());
+        assertEquals(StatutUtilisateur.REFUSE, result.getStatut());
         verify(producteurRepository).findById(1L);
         verify(producteurRepository).save(any(Producteur.class));
     }

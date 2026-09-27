@@ -24,9 +24,14 @@ public class MarketplaceController {
     private final MarketplaceService marketplaceService;
 
     @GetMapping("/produits")
-    public ResponseEntity<ApiResponse<Page<Produit>>> listerProduits(Pageable pageable) {
-        Page<Produit> produits = marketplaceService.listerProduitsDisponibles(pageable);
+    public ResponseEntity<ApiResponse<Page<ProduitDto>>> listerProduits(Pageable pageable) {
+        Page<ProduitDto> produits = marketplaceService.listerProduitsDisponiblesDto(pageable);
         return ResponseEntity.ok(ApiResponse.success(produits));
+    }
+
+    @GetMapping("/produits/{produitId}")
+    public ResponseEntity<ApiResponse<ProduitDto>> obtenirProduit(@PathVariable Long produitId) {
+        return ResponseEntity.ok(ApiResponse.success(marketplaceService.obtenirProduitDto(produitId)));
     }
 
     @PostMapping("/produits")
@@ -76,9 +81,6 @@ public class MarketplaceController {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        if (!currentUserId.equals(producteurId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         List<ProduitDto> catalogue = marketplaceService.consulterCatalogueProducteurDto(producteurId);
         return ResponseEntity.ok(ApiResponse.success(catalogue));
@@ -145,6 +147,16 @@ public class MarketplaceController {
         return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande confirmée avec succès"));
     }
 
+    @PostMapping("/commandes/{commandeId}/refuser")
+    public ResponseEntity<ApiResponse<CommandeDto>> refuserCommande(@PathVariable Long commandeId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Commande commande = marketplaceService.refuserCommande(commandeId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(CommandeDto.fromEntity(commande), "Commande refusée"));
+    }
+
     @PostMapping("/commandes/{commandeId}/annuler")
     public ResponseEntity<ApiResponse<CommandeDto>> annulerCommande(
             @PathVariable Long commandeId,
@@ -199,4 +211,3 @@ public class MarketplaceController {
         return ResponseEntity.ok(ApiResponse.success(dtoPage));
     }
 }
-
