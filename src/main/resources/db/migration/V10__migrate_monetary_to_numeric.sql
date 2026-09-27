@@ -7,8 +7,8 @@ ALTER TABLE paiement ALTER COLUMN montant TYPE NUMERIC(19,4);
 -- Change produit.prix to NUMERIC
 ALTER TABLE produit ALTER COLUMN prix TYPE NUMERIC(19,4);
 
--- Change ligne_commande.prix_unitaire to NUMERIC
-ALTER TABLE ligne_commande ALTER COLUMN prix_unitaire TYPE NUMERIC(19,4);
+-- Change ligne_commande.prix_unitaire_fige to NUMERIC
+ALTER TABLE ligne_commande ALTER COLUMN prix_unitaire_fige TYPE NUMERIC(19,4);
 
 -- Change facture.montant to NUMERIC
 ALTER TABLE facture ALTER COLUMN montant TYPE NUMERIC(19,4);

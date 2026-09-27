@@ -1,0 +1,2 @@
+ALTER TABLE produit
+    ADD COLUMN type_produit VARCHAR(50) NOT NULL DEFAULT 'LARVE';
