@@ -15,7 +15,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="text-center mb-10">
           <div class="flex items-center justify-center mb-6">
             <div class="w-20 h-20 rounded-full border-4 border-wine flex items-center justify-center mr-4 bg-green-soft overflow-hidden">
-              <img src="logo.png" alt="BioConversion Logo" class="w-16 h-16 object-contain">
+              <img src="/logo.png" alt="BioConversion Logo" class="w-16 h-16 object-contain">
             </div>
             <h1 class="text-4xl font-serif text-wine font-bold">Inscription Producteur</h1>
           </div>
