@@ -20,6 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Configuration Spring Security.
@@ -51,12 +52,16 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final IotApiKeyFilter iotApiKeyFilter;
     private final BioUserDetailsService userDetailsService;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // CSRF désactivé : API REST stateless (ADR-002)
                 .csrf(AbstractHttpConfigurer::disable)
+
+                // CORS activé avec configuration source
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
                 // Politique de session : STATELESS (JWT)
                 .sessionManagement(sm -> sm
@@ -72,40 +77,26 @@ public class SecurityConfig {
                                 "/api/v1/auth/login")
                         .permitAll()
 
-                        // Webhook Orange Money (callbacks bancaires/opérateurs)
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/v1/paiements/webhook/**")
-                        .permitAll()
-
-                        // Swagger / OpenAPI
-                        .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html")
-                        .permitAll()
-
-                        // ── Module A — IoT — Uses API key authentication (not JWT)
-                        .requestMatchers("/api/v1/iot/**")
-                        .permitAll()
-
-                        // ── Module B — Marketplace ────────────────────────
-                        .requestMatchers("/api/v1/marketplace/**")
-                        .hasAnyRole("PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR")
-
-                        // ── Module C — Paiement ───────────────────────────
-                        .requestMatchers("/api/v1/paiements/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
-                        .requestMatchers("/api/v1/factures/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
-
-                        // ── Module D — Réseau Producteurs ─────────────────
-                        .requestMatchers("/api/v1/producteurs/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
-
-                        // ── Profil utilisateur & auth ─────────────────────
+                        // ── Endpoints protégés par authentification ────────
                         .requestMatchers("/api/v1/auth/**").authenticated()
 
-                        // Tout le reste exige une authentification
+                        // ── Endpoints IoT (producteurs + API key) ───────────
+                        .requestMatchers("/api/v1/iot/**").hasRole("PRODUCTEUR")
+
+                        // ── Endpoints marketplace ( éleveurs) ───────────────
+                        .requestMatchers("/api/v1/marketplace/**").hasRole("ELEVEUR")
+                        .requestMatchers("/api/v1/commandes/**").hasRole("ELEVEUR")
+
+                        // ── Endpoints producteurs (produits, commandes) ──────
+                        .requestMatchers("/api/v1/producteurs/**").hasRole("PRODUCTEUR")
+
+                        // ── Endpoints paiement ──────────────────────────────
+                        .requestMatchers("/api/v1/paiements/**").hasRole("ELEVEUR")
+
+                        // ── Endpoints admin ──────────────────────────────────
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMINISTRATEUR")
+
+                        // ── Tout le reste : authentification requise ───────────
                         .anyRequest().authenticated())
 
                 // Fournisseur d'authentification DAO
