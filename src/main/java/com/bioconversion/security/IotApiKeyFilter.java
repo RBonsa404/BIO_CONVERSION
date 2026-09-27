@@ -25,20 +25,20 @@ public class IotApiKeyFilter extends OncePerRequestFilter {
     private final AppProperties appProperties;
 
     private static final String API_KEY_HEADER = "X-API-Key";
-    private static final String IOT_PATH_PREFIX = "/api/v1/iot";
+    private static final String TELEMETRIE_PATH = "/api/v1/iot/telemetrie";
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return !"POST".equals(request.getMethod()) || !TELEMETRIE_PATH.equals(path);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-
-        // Only apply this filter to IoT endpoints
-        if (!path.startsWith(IOT_PATH_PREFIX)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        String path = request.getRequestURI().substring(request.getContextPath().length());
 
         String apiKey = request.getHeader(API_KEY_HEADER);
 
