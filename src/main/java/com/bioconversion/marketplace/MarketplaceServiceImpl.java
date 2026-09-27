@@ -207,7 +207,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
 
         if (producteurId == null || !commande.getProducteur().getIdUtilisateur().equals(producteurId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException(
+            throw new com.bioconversion.common.exception.ForbiddenException(
                     "Seul le producteur assigné à cette commande peut la refuser");
         }
         if (commande.getStatut() != StatutCommande.EN_ATTENTE) {
@@ -247,7 +247,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
 
         if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId) 
                 && !commande.getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à annuler cette commande");
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à annuler cette commande");
         }
 
         if (commande.getStatut() == StatutCommande.LIVRE || commande.getStatut() == StatutCommande.EXPEDIE
@@ -281,7 +281,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
 
         if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId) 
                 && !commande.getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à accéder à cette commande");
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à accéder à cette commande");
         }
 
         return commande;
@@ -371,7 +371,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                         .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
                 
                 if (currentUserId != null && !produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
-                    throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
+                    throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à modifier ce produit");
                 }
                 
                 produit.setQuantiteStock(nouvelleQuantite);
@@ -403,7 +403,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
 
         if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à modifier ce produit");
         }
 
         produit.setPrix(BigDecimal.valueOf(nouveauPrix));
@@ -426,7 +426,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
         
         if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à retirer ce produit");
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à retirer ce produit");
         }
         
         produit.setDisponibilite(false);

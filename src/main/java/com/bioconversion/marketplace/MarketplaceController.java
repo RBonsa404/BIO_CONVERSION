@@ -1,7 +1,6 @@
 package com.bioconversion.marketplace;
 
 import com.bioconversion.common.dto.ApiResponse;
-import com.bioconversion.common.exception.UnauthorizedException;
 import com.bioconversion.marketplace.dto.CommandeDto;
 import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
 import com.bioconversion.marketplace.dto.ProduitDto;

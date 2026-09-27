@@ -295,7 +295,7 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
 
         if (!facture.getPaiement().getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
                 && !facture.getPaiement().getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException(
+            throw new com.bioconversion.common.exception.ForbiddenException(
                     "Vous n'êtes pas autorisé à consulter cette facture");
         }
 
