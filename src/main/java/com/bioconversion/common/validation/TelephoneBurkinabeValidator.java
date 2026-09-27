@@ -1,17 +1,14 @@
 package com.bioconversion.common.validation;
 
+import com.bioconversion.common.util.PhoneUtils;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-import java.util.regex.Pattern;
-
 /**
  * Validateur effectif du format de numéro de téléphone burkinabè.
+ * Uses PhoneUtils for consistent normalization and validation.
  */
 public class TelephoneBurkinabeValidator implements ConstraintValidator<TelephoneBurkinabe, String> {
-
-    // Regexp autorisant l'indicatif optionnel (+226 ou 00226) suivi de 8 chiffres (les espaces sont retirés avant validation)
-    private static final Pattern PATTERN = Pattern.compile("^(\\+226|00226)?\\d{8}$");
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
@@ -19,7 +16,12 @@ public class TelephoneBurkinabeValidator implements ConstraintValidator<Telephon
             return true; // Géré par @NotBlank / @NotNull séparément
         }
 
-        String cleaned = value.replaceAll("\\s+", "");
-        return PATTERN.matcher(cleaned).matches();
+        try {
+            // Try to normalize - if it succeeds, the format is valid
+            PhoneUtils.normalizeToE164(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }

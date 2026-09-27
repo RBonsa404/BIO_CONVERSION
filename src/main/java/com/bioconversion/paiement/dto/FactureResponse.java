@@ -2,12 +2,13 @@ package com.bioconversion.paiement.dto;
 
 import com.bioconversion.paiement.Facture;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 public record FactureResponse(
         Long idFacture,
         String reference,
-        Double montant,
+        BigDecimal montant,
         OffsetDateTime dateFacture,
         boolean pdfDisponible
 ) {

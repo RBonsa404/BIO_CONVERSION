@@ -9,6 +9,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -138,12 +139,12 @@ public class Commande {
      *
      * @return montant total en FCFA
      */
-    public double calculerMontantTotal() {
+    public BigDecimal calculerMontantTotal() {
         if (lignes == null || lignes.isEmpty()) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
         return lignes.stream()
-                .mapToDouble(LigneCommande::calculerSousTotal)
-                .sum();
+                .map(LigneCommande::calculerSousTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

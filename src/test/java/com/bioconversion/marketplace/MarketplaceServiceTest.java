@@ -18,6 +18,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -76,7 +77,7 @@ class MarketplaceServiceTest {
                 .build();
 
         // Simulation Mockito du Repository du Module D
-        when(producteurRepository.findByStatut(com.bioconversion.utilisateur.StatutUtilisateur.ACTIF, any(Pageable.class)))
+        when(producteurRepository.findByStatut(eq(com.bioconversion.utilisateur.StatutUtilisateur.ACTIF), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(p1, p2)));
 
         // When : Recherche dans un rayon de 50 km autour de Ouagadougou

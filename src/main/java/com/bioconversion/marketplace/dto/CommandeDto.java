@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,7 +31,7 @@ public class CommandeDto {
     private String nomExploitation;
     private OffsetDateTime dateCommande;
     private StatutCommande statut;
-    private double montantTotal;
+    private BigDecimal montantTotal;
     private List<LigneCommandeDto> lignes;
 
     public static CommandeDto fromEntity(Commande commande) {

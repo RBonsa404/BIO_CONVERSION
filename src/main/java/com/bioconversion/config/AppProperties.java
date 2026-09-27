@@ -48,7 +48,9 @@ public record AppProperties(
 
                 PaiementProperties paiement,
 
-                FacturesProperties factures
+                FacturesProperties factures,
+
+                IotProperties iot
 
 ) {
 
@@ -100,5 +102,12 @@ public record AppProperties(
          */
         public record PaiementProperties(
                         @NotBlank String webhookSecret) {
+        }
+
+        /**
+         * Configuration du module IoT pour l'authentification par API key.
+         */
+        public record IotProperties(
+                        @NotBlank String apiKey) {
         }
 }

@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -99,7 +100,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                     .commande(commande)
                     .produit(produit)
                     .quantite(quantite)
-                    .prixUnitaireFige(produit.getPrix())
+                    .prixUnitaireFige(produit.getPrix() != null ? produit.getPrix() : BigDecimal.ZERO)
                     .build();
 
             commande.ajouterLigne(ligne);
@@ -359,7 +360,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     public Produit modifierPrix(Long produitId, double nouveauPrix) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
-        produit.setPrix(nouveauPrix);
+        produit.setPrix(BigDecimal.valueOf(nouveauPrix));
         return produitRepository.save(produit);
     }
 
@@ -368,12 +369,12 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     public Produit modifierPrix(Long produitId, double nouveauPrix, Long currentUserId) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
-        
+
         if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
             throw new com.bioconversion.common.exception.UnauthorizedException("Vous n'êtes pas autorisé à modifier ce produit");
         }
-        
-        produit.setPrix(nouveauPrix);
+
+        produit.setPrix(BigDecimal.valueOf(nouveauPrix));
         return produitRepository.save(produit);
     }
 

@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 /**
  * DTO représentant une ligne de commande.
  */
@@ -20,6 +22,6 @@ public class LigneCommandeDto {
     private Long produitId;
     private String nomProduit;
     private double quantite;
-    private double prixUnitaireFige;
-    private double sousTotal;
+    private BigDecimal prixUnitaireFige;
+    private BigDecimal sousTotal;
 }

@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
@@ -55,8 +56,8 @@ public class Paiement {
      * TODO Module C : forcer montant = commande.calculerMontantTotal() — ne pas permettre saisie libre.
      */
     @Positive(message = "Le montant du paiement doit être strictement positif")
-    @Column(name = "montant", nullable = false)
-    private double montant;
+    @Column(name = "montant", nullable = false, precision = 19, scale = 4)
+    private BigDecimal montant;
 
     /**
      * Opérateur de paiement : "ORANGE_MONEY" ou "ESPECES".

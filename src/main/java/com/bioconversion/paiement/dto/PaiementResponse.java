@@ -3,12 +3,13 @@ package com.bioconversion.paiement.dto;
 import com.bioconversion.paiement.Paiement;
 import com.bioconversion.paiement.StatutPaiement;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 public record PaiementResponse(
         Long idPaiement,
         Long idCommande,
-        Double montant,
+        BigDecimal montant,
         String operateur,
         String referenceTransaction,
         OffsetDateTime datePaiement,

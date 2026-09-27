@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,7 +58,7 @@ class ProduitRepositoryTest {
                 .producteur(producteur)
                 .nomProduit("Larves BSFL fraîches")
                 .quantiteStock(500.0)
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .typeProduit(TypeProduit.LARVE)
                 .disponibilite(true)
                 .build();
@@ -67,7 +68,7 @@ class ProduitRepositoryTest {
                 .producteur(producteur)
                 .nomProduit("Compost Bio-résidu d'élevage")
                 .quantiteStock(200.0)
-                .prix(500.0)
+                .prix(BigDecimal.valueOf(500.0))
                 .typeProduit(TypeProduit.RESIDU_PRODUCTION)
                 .disponibilite(true)
                 .build();
