@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService } from '../../../core/services/admin.service';
 import { ProducteurProfile } from '../../../core/services/marketplace.service';
@@ -10,11 +10,15 @@ import { SidebarLayoutComponent } from '../../../layouts/sidebar-layout/sidebar-
   imports: [CommonModule, SidebarLayoutComponent],
   template: `
     <app-sidebar-layout area="admin">
-    <main class="min-h-screen bg-cream p-8">
-      <div class="max-w-5xl mx-auto">
-        <header class="mb-8">
-          <h1 class="text-3xl font-serif text-wine font-bold mb-2">Validation des producteurs</h1>
-          <p class="text-text">Examinez les demandes d'inscription en attente.</p>
+    <main class="min-h-screen bg-cream px-5 py-6 md:px-8 md:py-8">
+      <div class="mx-auto max-w-7xl">
+        <header class="mb-7 flex items-center gap-4 border-b border-line pb-5">
+          <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-green-soft text-2xl text-green" aria-hidden="true">♧</span>
+          <div class="min-w-0 flex-1">
+            <h1 class="font-serif text-3xl font-bold text-wine md:text-5xl">Administration</h1>
+            <p class="mt-1 text-text">Validation des demandes de producteurs</p>
+          </div>
+          <span class="hidden rounded-full bg-green-soft px-4 py-2 font-semibold text-green sm:inline">Admin</span>
         </header>
 
         <div *ngIf="isLoading" role="status" class="bg-white rounded-2xl p-6 text-text">
@@ -24,41 +28,54 @@ import { SidebarLayoutComponent } from '../../../layouts/sidebar-layout/sidebar-
           {{ errorMessage }}
           <button type="button" (click)="loadProducteurs()" class="ml-3 underline font-semibold">Réessayer</button>
         </div>
-        <div *ngIf="actionMessage" role="status" class="mb-6 p-4 bg-green-soft rounded-xl text-green">
+        <div *ngIf="actionMessage" role="status" class="mb-6 rounded-xl bg-green-soft p-4 text-green">
           {{ actionMessage }}
         </div>
 
-        <section *ngIf="!isLoading" class="bg-white rounded-2xl shadow-sm p-6">
-          <h2 class="text-xl font-serif text-wine font-medium mb-6">
-            Producteurs en attente ({{ producteurs.length }})
-          </h2>
+        <section *ngIf="!isLoading" class="mb-6 rounded-2xl border border-line bg-white p-5 shadow-sm md:p-6">
+          <div class="mb-5 flex items-center justify-between gap-4">
+            <h2 class="font-serif text-2xl font-semibold text-wine">Comptes producteurs en attente de validation</h2>
+            <span class="rounded-xl bg-green-soft px-4 py-2 text-2xl font-bold text-wine">{{ producteurs.length }}</span>
+          </div>
           <p *ngIf="producteurs.length === 0 && !errorMessage" class="text-text py-6">
             Aucune demande en attente.
           </p>
-          <article *ngFor="let producteur of producteurs"
-                   class="flex flex-wrap items-center justify-between gap-4 p-4 bg-cream rounded-lg mb-4">
-            <div>
-              <p class="text-wine font-semibold">{{ producteur.prenom }} {{ producteur.nom }}</p>
-              <p class="text-text text-sm">
-                {{ producteur.nomExploitation }}
-                <span *ngIf="producteur.ville"> · {{ producteur.ville }}</span>
-                <span *ngIf="producteur.province">, {{ producteur.province }}</span>
-              </p>
-              <p class="text-text text-sm">Capacité : {{ producteur.capaciteProduction }} kg/mois</p>
-            </div>
-            <div class="flex gap-2">
-              <button type="button" (click)="valider(producteur, true)"
-                      [disabled]="processingId === producteur.id"
-                      class="bg-green text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
-                Valider
-              </button>
-              <button type="button" (click)="valider(producteur, false)"
-                      [disabled]="processingId === producteur.id"
-                      class="bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50">
-                Refuser
-              </button>
-            </div>
-          </article>
+          <div *ngIf="producteurs.length > 0" class="overflow-x-auto rounded-xl border border-line">
+            <table class="w-full min-w-[720px] text-left">
+              <thead class="bg-green-soft/60 text-sm text-text">
+                <tr>
+                  <th scope="col" class="px-4 py-4 font-semibold">Producteur</th>
+                  <th scope="col" class="px-4 py-4 font-semibold">Exploitation et localisation</th>
+                  <th scope="col" class="px-4 py-4 font-semibold">Capacité</th>
+                  <th scope="col" class="px-4 py-4 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let producteur of producteurs" class="border-t border-line">
+                  <td class="px-4 py-5 font-medium text-wine">{{ producteur.prenom }} {{ producteur.nom }}</td>
+                  <td class="px-4 py-5 text-text">
+                    <span class="block font-medium">{{ producteur.nomExploitation }}</span>
+                    <span class="text-sm">{{ producteur.ville || 'Ville non renseignée' }}<span *ngIf="producteur.province"> · {{ producteur.province }}</span></span>
+                  </td>
+                  <td class="px-4 py-5 text-text">{{ producteur.capaciteProduction }} kg/mois</td>
+                  <td class="px-4 py-5">
+                    <div class="flex justify-end gap-2">
+                      <button type="button" (click)="valider(producteur, false)"
+                              [disabled]="processingId === producteur.id"
+                              class="rounded-lg border border-wine px-4 py-2 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">
+                        Refuser
+                      </button>
+                      <button type="button" (click)="valider(producteur, true)"
+                              [disabled]="processingId === producteur.id"
+                              class="rounded-lg bg-green px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                        Valider
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </main>
@@ -72,7 +89,10 @@ export class AdminDashboardComponent implements OnInit {
   actionMessage = '';
   processingId: number | null = null;
 
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadProducteurs();
@@ -85,10 +105,12 @@ export class AdminDashboardComponent implements OnInit {
       next: response => {
         this.producteurs = response.data.content;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger les demandes de validation. Vérifiez votre connexion et réessayez.';
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
@@ -104,10 +126,12 @@ export class AdminDashboardComponent implements OnInit {
           ? `${producteur.nomExploitation} a été validée.`
           : `La demande de ${producteur.nomExploitation} a été refusée.`;
         this.processingId = null;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = `Impossible de ${approuve ? 'valider' : 'refuser'} cette demande. Réessayez.`;
         this.processingId = null;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

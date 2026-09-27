@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -10,7 +10,7 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   template: `
-    <div class="min-h-screen bg-cream flex items-center justify-center p-8 relative overflow-hidden">
+    <div class="min-h-screen bg-cream px-5 py-8 relative">
       <!-- Decorative background -->
       <div class="absolute inset-0 opacity-5">
         <div class="absolute top-0 right-0 w-96 h-96 rounded-full bg-green blur-3xl"></div>
@@ -18,14 +18,14 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
       </div>
 
       <!-- Registration form card -->
-      <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full relative z-10 border border-line">
+      <div class="mx-auto bg-white rounded-3xl shadow-lg p-6 max-w-6xl w-full relative z-10 border border-line md:p-10">
         <!-- Header -->
-        <div class="text-center mb-10">
-          <div class="flex items-center justify-center mb-6">
-            <div class="w-16 h-16 rounded-full border-3 border-wine flex items-center justify-center mr-4 bg-green-soft overflow-hidden">
-              <img src="logo.png" alt="BioConversion Logo" class="w-13 h-13 object-contain">
+        <div class="mb-8 text-left">
+          <div class="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-wine bg-green-soft sm:mr-4">
+              <img src="/logo.png" alt="Emblème BioConversion" class="h-full w-full object-contain">
             </div>
-            <h1 class="text-3xl font-serif text-wine font-bold">Inscription Éleveur</h1>
+            <h1 class="font-serif text-4xl font-bold text-wine md:text-5xl">Inscription éleveur</h1>
           </div>
           <p class="text-text text-base">Rejoignez la communauté BioConversion et trouvez les meilleurs producteurs</p>
         </div>
@@ -94,19 +94,32 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
             </div>
 
             <div class="mt-6">
-              <label for="typeElevage" class="block text-text text-sm font-semibold mb-2">
+              <p id="typeElevage-label" class="mb-3 block text-sm font-semibold text-text">
                 Type d'élevage <span class="text-wine">*</span>
-              </label>
-              <select
-                id="typeElevage"
-                formControlName="typeElevage"
-                class="w-full px-4 py-3 border-2 border-line rounded-xl focus:outline-none focus:border-wine focus:ring-2 focus:ring-wine/20 transition-all bg-white"
-              >
-                <option value="">Sélectionnez votre type d'élevage</option>
-                <option value="PISCICULTURE">Pisciculture</option>
-                <option value="AVICULTURE">Aviculture</option>
-                <option value="AUTRE">Autre</option>
-              </select>
+              </p>
+              <div role="radiogroup" aria-labelledby="typeElevage-label" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label class="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-line p-4 transition hover:border-green has-[:checked]:border-green has-[:checked]:bg-green-soft/50">
+                  <input type="radio" formControlName="typeElevage" value="PISCICULTURE" class="accent-green">
+                  <span class="grid h-14 w-14 place-items-center rounded-full bg-green-soft" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" class="h-9 w-9" fill="none" stroke="#4e7d3f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 24c8-10 20-14 32-5l7 5-7 5C25 38 13 34 5 24Z" />
+                      <circle cx="34" cy="22" r="1.5" fill="#4e7d3f" />
+                      <path d="M8 37c5-3 10-3 15 0s10 3 16 0" />
+                    </svg>
+                  </span>
+                  <span><strong class="block font-serif text-lg text-wine">Pisciculteur</strong><small class="text-text">J’élève des poissons</small></span>
+                </label>
+                <label class="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-line p-4 transition hover:border-green has-[:checked]:border-green has-[:checked]:bg-green-soft/50">
+                  <input type="radio" formControlName="typeElevage" value="AVICULTURE" class="accent-green">
+                  <span class="grid h-14 w-14 place-items-center rounded-full bg-green-soft" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" class="h-9 w-9" fill="none" stroke="#4e7d3f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 35c-5-6-4-15 2-19l4 3c2-5 7-8 12-6l-1 5c5-1 9 2 10 7l-5 1c2 4 1 8-3 11H16l-4-2Z" />
+                      <path d="m30 18 5-5m-19 25v3m12-3v3m-13-6 4-1m15 1-4-1m8-14 4 2-4 2" />
+                    </svg>
+                  </span>
+                  <span><strong class="block font-serif text-lg text-wine">Aviculteur</strong><small class="text-text">J’élève des volailles</small></span>
+                </label>
+              </div>
               <div *ngIf="inscriptionForm.get('typeElevage')?.touched && inscriptionForm.get('typeElevage')?.invalid" class="text-red-500 text-sm mt-2">
                 Le type d'élevage est requis
               </div>
@@ -248,7 +261,8 @@ export class InscriptionEleveurComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     this.inscriptionForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -303,6 +317,7 @@ export class InscriptionEleveurComponent {
       error: (error) => {
         this.isLoading = false;
         this.errorMessage = error.error?.message || 'Erreur lors de l\'inscription. Veuillez réessayer.';
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
