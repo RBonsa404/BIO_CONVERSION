@@ -37,7 +37,7 @@ public class CorsConfig {
         String allowedOriginsStr = appProperties.security() != null
                 && appProperties.security().allowedOrigins() != null
                         ? appProperties.security().allowedOrigins()
-                        : "http://localhost:3000";
+                        : "http://localhost:4200";
 
         List<String> allowedOrigins = List.of(allowedOriginsStr.split(","));
 
