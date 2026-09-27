@@ -167,6 +167,7 @@ public class PaiementServiceImpl implements PaiementService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Paiement consulterParCommande(Long idCommande, Long currentUserId) {
         Paiement paiement = paiementRepository.findByCommandeIdCommande(idCommande)
                 .orElseThrow(() -> new ResourceNotFoundException(

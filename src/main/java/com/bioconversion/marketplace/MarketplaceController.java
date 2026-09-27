@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 /**
@@ -110,6 +111,7 @@ public class MarketplaceController {
     // ──────────────────────────────────────────────────────────────────────────
 
     @PostMapping("/commandes")
+    @Transactional
     public ResponseEntity<ApiResponse<CommandeDto>> passerCommande(
             @jakarta.validation.Valid @RequestBody com.bioconversion.marketplace.dto.PasserCommandeRequest request,
             @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyHeader) {
@@ -128,6 +130,7 @@ public class MarketplaceController {
     }
 
     @PatchMapping("/commandes/{commandeId}/statut")
+    @Transactional
     public ResponseEntity<ApiResponse<CommandeDto>> changerStatutCommande(
             @PathVariable Long commandeId,
             @jakarta.validation.Valid @RequestBody com.bioconversion.marketplace.dto.ChangerStatutCommandeRequest request) {
@@ -136,6 +139,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/commandes/{commandeId}/confirmer")
+    @Transactional
     public ResponseEntity<ApiResponse<CommandeDto>> confirmerCommande(
             @PathVariable Long commandeId) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -147,6 +151,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/commandes/{commandeId}/refuser")
+    @Transactional
     public ResponseEntity<ApiResponse<CommandeDto>> refuserCommande(@PathVariable Long commandeId) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -157,6 +162,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/commandes/{commandeId}/annuler")
+    @Transactional
     public ResponseEntity<ApiResponse<CommandeDto>> annulerCommande(
             @PathVariable Long commandeId,
             @RequestParam(required = false) String motif) {
@@ -169,6 +175,7 @@ public class MarketplaceController {
     }
 
     @GetMapping("/commandes/{commandeId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<CommandeDto>> obtenirCommande(@PathVariable Long commandeId) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -179,6 +186,7 @@ public class MarketplaceController {
     }
 
     @GetMapping("/commandes/eleveur/{eleveurId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<CommandeDto>>> listerCommandesEleveur(
             @PathVariable Long eleveurId,
             Pageable pageable) {
@@ -195,6 +203,7 @@ public class MarketplaceController {
     }
 
     @GetMapping("/commandes/producteur/{producteurId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<CommandeDto>>> listerCommandesProducteur(
             @PathVariable Long producteurId,
             Pageable pageable) {

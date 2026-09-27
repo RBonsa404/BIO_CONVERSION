@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -22,6 +23,7 @@ public class ReseauProducteurController {
 
     @GetMapping("/en-attente")
     @PreAuthorize("hasRole('ADMINISTRATEUR')")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<ProducteurResponse>>> listerProducteursEnAttente(Pageable pageable) {
         Page<ProducteurResponse> producteurs = reseauProducteurService.listerProducteursEnAttente(pageable)
                 .map(ProducteurResponse::from);
@@ -50,6 +52,7 @@ public class ReseauProducteurController {
 
     @PutMapping("/{id}/valider")
     @PreAuthorize("hasRole('ADMINISTRATEUR')")
+    @Transactional
     public ResponseEntity<ApiResponse<ProducteurResponse>> validerProducteur(
             @PathVariable Long id,
             @RequestParam boolean approuve) {
