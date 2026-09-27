@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -64,7 +66,7 @@ class CommandeRepositoryTest {
                 .producteur(producteur)
                 .nomProduit("Larves séchées")
                 .quantiteStock(200.0)
-                .prix(2000.0)
+                .prix(BigDecimal.valueOf(2000.0))
                 .typeProduit(TypeProduit.LARVE)
                 .disponibilite(true)
                 .build());
@@ -81,7 +83,7 @@ class CommandeRepositoryTest {
         LigneCommande ligne = LigneCommande.builder()
                 .produit(produit)
                 .quantite(10.0)
-                .prixUnitaireFige(2000.0)
+                .prixUnitaireFige(BigDecimal.valueOf(2000.0))
                 .build();
 
         commande.ajouterLigne(ligne);

@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,7 +35,7 @@ class MarketplaceServiceStockTest {
                 .idProduit(5L)
                 .nomProduit("Larves BSFL fraîches")
                 .quantiteStock(100.0)
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .typeProduit(TypeProduit.LARVE)
                 .disponibilite(true)
                 .build();
@@ -58,7 +59,7 @@ class MarketplaceServiceStockTest {
                 .idProduit(5L)
                 .nomProduit("Larves BSFL fraîches")
                 .quantiteStock(100.0)
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .typeProduit(TypeProduit.LARVE)
                 .disponibilite(true)
                 .build();

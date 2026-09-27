@@ -8,6 +8,8 @@ import com.bioconversion.utilisateur.EleveurRepository;
 import com.bioconversion.utilisateur.Producteur;
 import com.bioconversion.utilisateur.ProducteurRepository;
 import com.bioconversion.utilisateur.StatutUtilisateur;
+
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -89,7 +91,7 @@ class MarketplaceServiceCommandeTest {
         produit = Produit.builder()
                 .idProduit(100L)
                 .nomProduit("Larves BSFL fraîches")
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .quantiteStock(50.0)
                 .disponibilite(true)
                 .typeProduit(TypeProduit.LARVE)
