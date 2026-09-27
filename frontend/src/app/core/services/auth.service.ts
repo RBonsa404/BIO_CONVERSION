@@ -2,6 +2,8 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, map, tap } from 'rxjs';
 import { ApiResponse, AuthRequest, AuthResponse, BackendAuthResponse, UtilisateurInfo } from '../models/auth.model';
+import { EleveurRegisterRequest } from '../models/eleveur-register-request.model';
+import { ProducteurRegisterRequest } from '../models/producteur-register-request.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -47,12 +49,18 @@ export class AuthService {
     };
   }
 
-  registerProducteur(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/register/producteur`, data);
+  registerProducteur(data: ProducteurRegisterRequest): Observable<ApiResponse<BackendAuthResponse['user']>> {
+    return this.http.post<ApiResponse<BackendAuthResponse['user']>>(
+      `${this.apiUrl}/auth/register/producteur`,
+      data
+    );
   }
 
-  registerEleveur(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/register/eleveur`, data);
+  registerEleveur(data: EleveurRegisterRequest): Observable<ApiResponse<BackendAuthResponse['user']>> {
+    return this.http.post<ApiResponse<BackendAuthResponse['user']>>(
+      `${this.apiUrl}/auth/register/eleveur`,
+      data
+    );
   }
 
   logout(): void {

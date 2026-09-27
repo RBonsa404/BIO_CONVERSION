@@ -42,28 +42,3 @@ export interface UtilisateurInfo {
   nomExploitation?: string;
   capaciteProduction?: number;
 }
-
-export interface ProducteurRegisterRequest {
-  nom: string;
-  prenom: string;
-  telephone: string;
-  motDePasse: string;
-  nomExploitation: string;
-  capaciteProduction: number;
-  ville: string;
-  province: string;
-  latitude?: number;
-  longitude?: number;
-}
-
-export interface EleveurRegisterRequest {
-  nom: string;
-  prenom: string;
-  telephone: string;
-  motDePasse: string;
-  typeElevage: string;
-  ville: string;
-  province: string;
-  latitude?: number;
-  longitude?: number;
-}
