@@ -20,6 +20,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test d'intégration JPA pour CommandeRepository.
@@ -97,7 +98,7 @@ class CommandeRepositoryTest {
         assertThat(trouvee).isNotNull();
         assertThat(trouvee.getNumeroCommande()).isEqualTo("CMD-TEST-001");
         assertThat(trouvee.getLignes()).hasSize(1);
-        assertThat(trouvee.calculerMontantTotal()).isEqualTo(20000.0);
+        assertTrue(BigDecimal.valueOf(20000.0).compareTo(trouvee.calculerMontantTotal()) == 0);
     }
 
     @Test

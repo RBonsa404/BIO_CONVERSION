@@ -127,8 +127,8 @@ class MarketplaceServiceCommandeTest {
 
         LigneCommande ligne = commande.getLignes().get(0);
         assertEquals(20.0, ligne.getQuantite());
-        assertEquals(1500.0, ligne.getPrixUnitaireFige(), "Le prix unitaire doit être figé à 1500 FCFA");
-        assertEquals(30000.0, ligne.calculerSousTotal());
+        assertEquals(0, BigDecimal.valueOf(1500.0).compareTo(ligne.getPrixUnitaireFige()), "Le prix unitaire doit être figé à 1500 FCFA");
+        assertEquals(0, BigDecimal.valueOf(30000.0).compareTo(ligne.calculerSousTotal()));
 
         // Vérification de la décrémentation du stock (50 - 20 = 30)
         assertEquals(30.0, produit.getQuantiteStock());

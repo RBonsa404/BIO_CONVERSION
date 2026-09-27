@@ -26,7 +26,7 @@ class CommandeCalculTest {
         BigDecimal sousTotal = ligne.calculerSousTotal();
 
         // Then
-        assertEquals(BigDecimal.valueOf(18600.0), sousTotal, "Le sous-total doit être 15.5 * 1200 = 18600 FCFA");
+        assertEquals(0, BigDecimal.valueOf(18600.0).compareTo(sousTotal), "Le sous-total doit être 15.5 * 1200 = 18600 FCFA");
     }
 
     @Test
@@ -53,7 +53,7 @@ class CommandeCalculTest {
         BigDecimal total = commande.calculerMontantTotal();
 
         // Then
-        assertEquals(BigDecimal.valueOf(20000.0), total, "Le montant total doit être de 20 000 FCFA");
+        assertEquals(0, BigDecimal.valueOf(20000.0).compareTo(total), "Le montant total doit être de 20 000 FCFA");
     }
 
     @Test

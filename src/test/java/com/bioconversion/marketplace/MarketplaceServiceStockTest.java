@@ -71,7 +71,7 @@ class MarketplaceServiceStockTest {
         Produit produitPrixMaj = marketplaceService.modifierPrix(5L, 1800.0);
 
         // Then : Le nouveau prix doit être pris en compte
-        assertEquals(1800.0, produitPrixMaj.getPrix(), "Le nouveau prix doit être de 1800 FCFA");
+        assertEquals(0, BigDecimal.valueOf(1800.0).compareTo(produitPrixMaj.getPrix()), "Le nouveau prix doit être de 1800 FCFA");
     }
 
     @Test

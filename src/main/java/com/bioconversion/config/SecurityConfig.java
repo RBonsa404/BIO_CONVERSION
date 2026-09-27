@@ -111,7 +111,7 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
 
                 // Filtre IoT API key pour les endpoints IoT (avant JWT)
-                .addFilterBefore(iotApiKeyFilter, JwtAuthenticationFilter.class)
+                .addFilterBefore(iotApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Filtre JWT avant le filtre standard d'authentification
                 .addFilterBefore(jwtAuthenticationFilter,
