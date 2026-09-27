@@ -80,33 +80,33 @@ export class MarketplaceService {
     rayonKm = 50
   ): Observable<ApiResponse<ProducteurLocalise[]>> {
     return this.http.get<ApiResponse<ProducteurLocalise[]>>(
-      `${this.apiUrl}/api/v1/marketplace/producteurs/recherche-geolocalisee`,
+      `${this.apiUrl}/marketplace/producteurs/recherche-geolocalisee`,
       { params: { latitude, longitude, rayonKm } }
     );
   }
 
   listerProduits(page = 0, size = 20): Observable<ApiResponse<PageResponse<Produit>>> {
     return this.http.get<ApiResponse<PageResponse<Produit>>>(
-      `${this.apiUrl}/api/v1/marketplace/produits`,
+      `${this.apiUrl}/marketplace/produits`,
       { params: { page, size } }
     );
   }
 
   obtenirProduit(produitId: number): Observable<ApiResponse<Produit>> {
     return this.http.get<ApiResponse<Produit>>(
-      `${this.apiUrl}/api/v1/marketplace/produits/${produitId}`
+      `${this.apiUrl}/marketplace/produits/${produitId}`
     );
   }
 
   consulterCatalogueProducteur(producteurId: number): Observable<ApiResponse<Produit[]>> {
     return this.http.get<ApiResponse<Produit[]>>(
-      `${this.apiUrl}/api/v1/marketplace/produits/producteur/${producteurId}`
+      `${this.apiUrl}/marketplace/produits/producteur/${producteurId}`
     );
   }
 
   obtenirProducteur(producteurId: number): Observable<ApiResponse<ProducteurProfile>> {
     return this.http.get<ApiResponse<ProducteurProfile>>(
-      `${this.apiUrl}/api/v1/producteurs/${producteurId}`
+      `${this.apiUrl}/producteurs/${producteurId}`
     );
   }
 
@@ -117,7 +117,7 @@ export class MarketplaceService {
     idempotencyKey = `cmd-${crypto.randomUUID()}`
   ): Observable<ApiResponse<Commande>> {
     return this.http.post<ApiResponse<Commande>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes`,
+      `${this.apiUrl}/marketplace/commandes`,
       { eleveurId, produitId, quantite, idempotencyKey }
     );
   }
@@ -128,7 +128,7 @@ export class MarketplaceService {
     size = 20
   ): Observable<ApiResponse<PageResponse<Commande>>> {
     return this.http.get<ApiResponse<PageResponse<Commande>>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes/eleveur/${eleveurId}`,
+      `${this.apiUrl}/marketplace/commandes/eleveur/${eleveurId}`,
       { params: { page, size } }
     );
   }
@@ -139,34 +139,34 @@ export class MarketplaceService {
     size = 20
   ): Observable<ApiResponse<PageResponse<Commande>>> {
     return this.http.get<ApiResponse<PageResponse<Commande>>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes/producteur/${producteurId}`,
+      `${this.apiUrl}/marketplace/commandes/producteur/${producteurId}`,
       { params: { page, size } }
     );
   }
 
   obtenirCommande(commandeId: number): Observable<ApiResponse<Commande>> {
     return this.http.get<ApiResponse<Commande>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes/${commandeId}`
+      `${this.apiUrl}/marketplace/commandes/${commandeId}`
     );
   }
 
   confirmerCommande(commandeId: number): Observable<ApiResponse<Commande>> {
     return this.http.post<ApiResponse<Commande>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes/${commandeId}/confirmer`,
+      `${this.apiUrl}/marketplace/commandes/${commandeId}/confirmer`,
       {}
     );
   }
 
   refuserCommande(commandeId: number): Observable<ApiResponse<Commande>> {
     return this.http.post<ApiResponse<Commande>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes/${commandeId}/refuser`,
+      `${this.apiUrl}/marketplace/commandes/${commandeId}/refuser`,
       {}
     );
   }
 
   annulerCommande(commandeId: number, motif?: string): Observable<ApiResponse<Commande>> {
     return this.http.post<ApiResponse<Commande>>(
-      `${this.apiUrl}/api/v1/marketplace/commandes/${commandeId}/annuler`,
+      `${this.apiUrl}/marketplace/commandes/${commandeId}/annuler`,
       {},
       { params: motif ? { motif } : {} }
     );

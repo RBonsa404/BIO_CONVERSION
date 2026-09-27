@@ -15,14 +15,14 @@ export class AdminService {
 
   listerProducteursEnAttente(page = 0, size = 20): Observable<ApiResponse<PageResponse<ProducteurProfile>>> {
     return this.http.get<ApiResponse<PageResponse<ProducteurProfile>>>(
-      `${this.apiUrl}/api/v1/producteurs/en-attente`,
+      `${this.apiUrl}/producteurs/en-attente`,
       { params: { page, size } }
     );
   }
 
   validerProducteur(producteurId: number, approuve: boolean): Observable<ApiResponse<ProducteurProfile>> {
     return this.http.put<ApiResponse<ProducteurProfile>>(
-      `${this.apiUrl}/api/v1/producteurs/${producteurId}/valider`,
+      `${this.apiUrl}/producteurs/${producteurId}/valider`,
       null,
       { params: { approuve } }
     );

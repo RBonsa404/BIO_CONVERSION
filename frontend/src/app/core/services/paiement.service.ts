@@ -24,20 +24,20 @@ export class PaiementService {
 
   initierPaiement(idCommande: number, operateur: string): Observable<ApiResponse<Paiement>> {
     return this.http.post<ApiResponse<Paiement>>(
-      `${this.apiUrl}/api/v1/paiements`,
+      `${this.apiUrl}/paiements`,
       { idCommande, operateur }
     );
   }
 
   consulterParCommande(idCommande: number): Observable<ApiResponse<Paiement>> {
     return this.http.get<ApiResponse<Paiement>>(
-      `${this.apiUrl}/api/v1/paiements/commande/${idCommande}`
+      `${this.apiUrl}/paiements/commande/${idCommande}`
     );
   }
 
   totalPaiementsConfirmes(producteurId: number): Observable<ApiResponse<number>> {
     return this.http.get<ApiResponse<number>>(
-      `${this.apiUrl}/api/v1/paiements/producteur/${producteurId}/solde`
+      `${this.apiUrl}/paiements/producteur/${producteurId}/solde`
     );
   }
 }
