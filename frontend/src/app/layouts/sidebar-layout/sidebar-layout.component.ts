@@ -82,20 +82,24 @@ interface SidebarLink {
   `
 })
 export class SidebarLayoutComponent {
+  private static readonly producerLinks: SidebarLink[] = [
+    { label: 'Tableau de bord', route: '/dashboard/producteur', icon: 'dashboard' },
+    { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' },
+    { label: 'Commandes', route: '/dashboard/producteur#commandes', icon: 'orders' },
+    { label: 'Capteurs IoT', route: '/iot', icon: 'sensors' },
+    { label: 'Statistiques', route: '/dashboard/producteur#stats', icon: 'chart' }
+  ];
+
+  private static readonly adminLinks: SidebarLink[] = [
+    { label: 'Validation', route: '/admin', icon: 'users' },
+    { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' }
+  ];
+
   @Input() area: DashboardArea = 'producer';
 
   get links(): SidebarLink[] {
     return this.area === 'admin'
-      ? [
-          { label: 'Validation', route: '/admin', icon: 'users' },
-          { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' }
-        ]
-      : [
-          { label: 'Tableau de bord', route: '/dashboard/producteur', icon: 'dashboard' },
-          { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' },
-          { label: 'Commandes', route: '/dashboard/producteur#commandes', icon: 'orders' },
-          { label: 'Capteurs IoT', route: '/iot', icon: 'sensors' },
-          { label: 'Statistiques', route: '/dashboard/producteur#stats', icon: 'chart' }
-        ];
+      ? SidebarLayoutComponent.adminLinks
+      : SidebarLayoutComponent.producerLinks;
   }
 }

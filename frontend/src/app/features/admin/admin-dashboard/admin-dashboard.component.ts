@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService } from '../../../core/services/admin.service';
 import { ProducteurProfile } from '../../../core/services/marketplace.service';
@@ -89,7 +89,10 @@ export class AdminDashboardComponent implements OnInit {
   actionMessage = '';
   processingId: number | null = null;
 
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadProducteurs();
@@ -102,10 +105,12 @@ export class AdminDashboardComponent implements OnInit {
       next: response => {
         this.producteurs = response.data.content;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger les demandes de validation. Vérifiez votre connexion et réessayez.';
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
@@ -121,10 +126,12 @@ export class AdminDashboardComponent implements OnInit {
           ? `${producteur.nomExploitation} a été validée.`
           : `La demande de ${producteur.nomExploitation} a été refusée.`;
         this.processingId = null;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = `Impossible de ${approuve ? 'valider' : 'refuser'} cette demande. Réessayez.`;
         this.processingId = null;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

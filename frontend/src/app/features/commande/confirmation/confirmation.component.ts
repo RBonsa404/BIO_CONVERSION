@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -70,7 +70,8 @@ export class ConfirmationComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private marketplaceService: MarketplaceService,
-    private paiementService: PaiementService
+    private paiementService: PaiementService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -98,10 +99,12 @@ export class ConfirmationComponent implements OnInit {
         this.commande = result.commande.data;
         this.paiement = result.paiement.data;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger les détails de la commande. Vérifiez votre connexion et réessayez.';
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

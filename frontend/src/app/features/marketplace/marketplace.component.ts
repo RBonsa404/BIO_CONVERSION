@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -159,7 +159,10 @@ export class MarketplaceComponent implements OnInit {
   private readonly latitude = 12.3714;
   private readonly longitude = -1.5197;
 
-  constructor(private marketplaceService: MarketplaceService) {}
+  constructor(
+    private marketplaceService: MarketplaceService,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadProduits();
@@ -191,10 +194,12 @@ export class MarketplaceComponent implements OnInit {
       next: response => {
         this.produits = response.data.content;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger les produits. Vérifiez votre connexion et réessayez.';
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
@@ -210,10 +215,12 @@ export class MarketplaceComponent implements OnInit {
       next: response => {
         this.producteurs = response.data;
         this.isLoadingMap = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.mapError = 'Impossible de charger les producteurs autour de cette zone.';
         this.isLoadingMap = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

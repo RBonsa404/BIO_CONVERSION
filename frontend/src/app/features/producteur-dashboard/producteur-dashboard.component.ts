@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
@@ -118,7 +118,8 @@ export class ProducteurDashboardComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private marketplaceService: MarketplaceService,
-    private paiementService: PaiementService
+    private paiementService: PaiementService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -147,10 +148,12 @@ export class ProducteurDashboardComponent implements OnInit {
         this.commandes = result.commandes.data.content;
         this.totalPaiementsConfirmes = result.paiements.data;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger le tableau de bord. Vérifiez votre connexion et réessayez.';
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
@@ -171,10 +174,12 @@ export class ProducteurDashboardComponent implements OnInit {
           ? `La commande ${commande.numeroCommande} a été validée.`
           : `La commande ${commande.numeroCommande} a été refusée.`;
         this.processingId = null;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = `Impossible de ${approuve ? 'valider' : 'refuser'} la commande ${commande.numeroCommande}. Réessayez.`;
         this.processingId = null;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

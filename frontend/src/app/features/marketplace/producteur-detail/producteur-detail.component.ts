@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -90,7 +90,8 @@ export class ProducteurDetailComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private marketplaceService: MarketplaceService
+    private marketplaceService: MarketplaceService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -118,10 +119,12 @@ export class ProducteurDetailComponent implements OnInit {
         this.producteur = response.producteur.data;
         this.produits = response.catalogue.data;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger cette fiche producteur. Vérifiez votre connexion et réessayez.';
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

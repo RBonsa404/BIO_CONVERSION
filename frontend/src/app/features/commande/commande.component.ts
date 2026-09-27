@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -104,7 +104,8 @@ export class CommandeComponent implements OnInit {
     private router: Router,
     private authService: AuthService,
     private marketplaceService: MarketplaceService,
-    private paiementService: PaiementService
+    private paiementService: PaiementService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     this.commandeForm = this.fb.nonNullable.group({
       quantite: [1, [Validators.required, Validators.min(0.001)]],
@@ -145,10 +146,12 @@ export class CommandeComponent implements OnInit {
       next: response => {
         this.produit = response.data;
         this.isLoadingProduct = false;
+        this.changeDetectorRef.markForCheck();
       },
       error: () => {
         this.errorMessage = 'Impossible de charger le produit. Vérifiez votre connexion et réessayez.';
         this.isLoadingProduct = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
@@ -182,6 +185,7 @@ export class CommandeComponent implements OnInit {
       error: error => {
         this.errorMessage = this.formatOrderError(error);
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
@@ -206,6 +210,7 @@ export class CommandeComponent implements OnInit {
           `La commande ${this.commande?.numeroCommande} est créée, mais le paiement n’a pas pu être initié. ` +
           `${this.formatOrderError(error)} Vous pouvez réessayer le paiement sans recréer la commande.`;
         this.isLoading = false;
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

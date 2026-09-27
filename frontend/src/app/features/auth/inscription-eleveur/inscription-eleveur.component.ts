@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -261,7 +261,8 @@ export class InscriptionEleveurComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     this.inscriptionForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -316,6 +317,7 @@ export class InscriptionEleveurComponent {
       error: (error) => {
         this.isLoading = false;
         this.errorMessage = error.error?.message || 'Erreur lors de l\'inscription. Veuillez réessayer.';
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

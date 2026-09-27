@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -96,7 +96,8 @@ export class ConnexionComponent {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     this.loginForm = this.fb.group({
       telephone: ['', [Validators.required]],
@@ -127,6 +128,7 @@ export class ConnexionComponent {
       error: (error) => {
         this.isLoading = false;
         this.errorMessage = 'Numéro de téléphone ou mot de passe incorrect';
+        this.changeDetectorRef.markForCheck();
       }
     });
   }

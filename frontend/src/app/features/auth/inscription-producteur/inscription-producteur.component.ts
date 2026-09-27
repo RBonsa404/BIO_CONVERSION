@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -192,7 +192,8 @@ export class InscriptionProducteurComponent {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     this.inscriptionForm = this.fb.group({
       nom: ['', [Validators.required]],
@@ -233,18 +234,15 @@ export class InscriptionProducteurComponent {
       ...(formValue.ville ? { ville: formValue.ville } : {})
     };
 
-    console.log('Sending registration data:', cleanedData);
-
     this.authService.registerProducteur(cleanedData).subscribe({
       next: (response) => {
-        console.log('Registration successful:', response);
         this.isLoading = false;
         this.router.navigate(['/connexion']);
       },
-      error: (error) => {
-        console.error('Registration error:', error);
+      error: (error: { error?: { message?: string } }) => {
         this.isLoading = false;
         this.errorMessage = error.error?.message || 'Erreur lors de l\'inscription. Veuillez réessayer.';
+        this.changeDetectorRef.markForCheck();
       }
     });
   }
