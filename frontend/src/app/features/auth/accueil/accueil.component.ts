@@ -245,7 +245,7 @@ import { CommonModule } from '@angular/common';
               <span class="text-xl font-serif text-wine font-bold">BioConversion</span>
             </div>
             <div class="text-text text-sm">
-              © 2024 BioConversion - ODC Groupe 3. Tous droits réservés.
+              © 2026 BioConversion - ODC Groupe 3. Tous droits réservés.
             </div>
           </div>
         </div>
