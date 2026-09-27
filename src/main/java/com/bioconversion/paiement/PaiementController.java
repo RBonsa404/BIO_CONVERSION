@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 /**
  * Module C — Paiement Intégré (Orange Money).
  * C-MUST-1 à C-MUST-4 du CDC v1.1.
@@ -101,5 +103,15 @@ public class PaiementController {
         Paiement paiement = paiementService.consulterParCommande(idCommande, currentUserId);
 
         return ResponseEntity.ok(ApiResponse.success(PaiementResponse.from(paiement)));
+    }
+
+    @GetMapping("/producteur/{producteurId}/solde")
+    public ResponseEntity<ApiResponse<BigDecimal>> consulterSoldeProducteur(@PathVariable Long producteurId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        BigDecimal solde = paiementService.totalPaiementsConfirmesProducteur(producteurId, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(solde));
     }
 }

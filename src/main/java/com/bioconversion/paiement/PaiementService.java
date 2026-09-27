@@ -1,5 +1,7 @@
 package com.bioconversion.paiement;
 
+import java.math.BigDecimal;
+
 /**
  * Service métier du Module C — Paiement Intégré (Orange Money).
  */
@@ -44,4 +46,6 @@ public interface PaiementService {
     Paiement consulterParCommande(Long idCommande);
 
     Paiement consulterParCommande(Long idCommande, Long currentUserId);
+
+    BigDecimal totalPaiementsConfirmesProducteur(Long producteurId, Long currentUserId);
 }

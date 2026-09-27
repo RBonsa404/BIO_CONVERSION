@@ -258,7 +258,7 @@ Ce document résume toutes les corrections apportées suite à l'audit technique
 - Création de `IotApiKeyFilter` pour l'authentification par clé API
 - Ajout de `SecurityProperties` avec champ `iot-api-key`
 - Configuration de la clé API via variable d'environnement
-- Les requêtes IoT doivent présenter le header `X-IoT-API-Key`
+- Les requêtes d'ingestion de télémétrie IoT doivent présenter le header `X-API-Key`
 - Les clés invalides ou manquantes sont rejetées avec 401
 - L'authentification par clé API coexiste avec JWT
 - Les endpoints non-IoT ne sont pas ouverts par le filtre clé API

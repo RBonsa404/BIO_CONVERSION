@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
+import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-request.model';
 
 @Component({
   selector: 'app-inscription-eleveur',
@@ -282,13 +283,17 @@ export class InscriptionEleveurComponent {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Remove confirmation field and empty values before sending to API
-    const { confirmationMotDePasse, latitude, longitude, ...registrationData } = this.inscriptionForm.value;
-
-    // Remove empty optional fields
-    const cleanedData = Object.fromEntries(
-      Object.entries(registrationData).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-    );
+    const formValue = this.inscriptionForm.value;
+    const cleanedData: EleveurRegisterRequest = {
+      nom: formValue.nom,
+      prenom: formValue.prenom,
+      telephone: formValue.telephone,
+      motDePasse: formValue.motDePasse,
+      typeElevage: formValue.typeElevage,
+      ...(formValue.adresse ? { adresse: formValue.adresse } : {}),
+      ...(formValue.province ? { province: formValue.province } : {}),
+      ...(formValue.ville ? { ville: formValue.ville } : {})
+    };
 
     this.authService.registerEleveur(cleanedData).subscribe({
       next: (response) => {

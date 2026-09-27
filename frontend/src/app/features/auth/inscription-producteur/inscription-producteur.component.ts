@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
+import { ProducteurRegisterRequest } from '../../../core/models/producteur-register-request.model';
 
 @Component({
   selector: 'app-inscription-producteur',
@@ -220,13 +221,17 @@ export class InscriptionProducteurComponent {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Remove confirmation field and empty values before sending to API
-    const { confirmationMotDePasse, ...registrationData } = this.inscriptionForm.value;
-
-    // Remove empty optional fields
-    const cleanedData = Object.fromEntries(
-      Object.entries(registrationData).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-    );
+    const formValue = this.inscriptionForm.value;
+    const cleanedData: ProducteurRegisterRequest = {
+      nom: formValue.nom,
+      prenom: formValue.prenom,
+      telephone: formValue.telephone,
+      motDePasse: formValue.motDePasse,
+      nomExploitation: formValue.nomExploitation,
+      capaciteProduction: Number(formValue.capaciteProduction),
+      ...(formValue.province ? { province: formValue.province } : {}),
+      ...(formValue.ville ? { ville: formValue.ville } : {})
+    };
 
     console.log('Sending registration data:', cleanedData);
 

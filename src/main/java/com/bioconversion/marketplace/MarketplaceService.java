@@ -15,6 +15,10 @@ public interface MarketplaceService extends CommandeService {
 
     Page<Produit> listerProduitsDisponibles(Pageable pageable);
 
+    Page<ProduitDto> listerProduitsDisponiblesDto(Pageable pageable);
+
+    ProduitDto obtenirProduitDto(Long produitId);
+
     Produit ajouterProduit(Produit produit, Long producteurId);
 
     Commande passerCommande(Long eleveurId, Long produitId, Double quantite);
@@ -24,6 +28,8 @@ public interface MarketplaceService extends CommandeService {
     Commande changerStatutCommande(Long commandeId, StatutCommande nouveauStatut);
 
     Commande confirmerCommande(Long commandeId, Long producteurId);
+
+    Commande refuserCommande(Long commandeId, Long producteurId);
 
     Commande annulerCommande(Long commandeId, String motif);
 

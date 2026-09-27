@@ -53,6 +53,15 @@ Les fichiers compilés seront générés dans le dossier `dist/frontend`.
 npm test
 ```
 
+## Sécurité de l'authentification
+
+Le token JWT est actuellement conservé dans `localStorage`. Ce choix facilite
+l'authentification côté client, mais rend le token accessible à tout script
+exécuté dans l'origine de l'application, notamment en cas de faille XSS. Ce
+risque est accepté pour la version actuelle; toute évolution des exigences de
+sécurité devrait privilégier une migration vers un cookie `httpOnly`, posé et
+renouvelé par le backend.
+
 ## Structure du projet
 
 ```

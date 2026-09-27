@@ -18,6 +18,10 @@ public interface ReseauProducteurService {
 
     Page<Producteur> listerProducteursParProvince(String province, Pageable pageable);
 
+    Page<Producteur> listerProducteursEnAttente(Pageable pageable);
+
+    Producteur trouverProducteur(Long producteurId);
+
     Producteur validerProducteur(Long producteurId, boolean approuve);
 
     Producteur suspendreCompte(Long utilisateurId);

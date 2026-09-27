@@ -1,44 +1,69 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { ApiResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 
 export interface ProducteurLocalise {
-  id: number;
-  nom: string;
-  prenom: string;
-  nomFerme: string;
+  producteurId: number;
+  nomExploitation: string;
+  ville: string;
+  province: string;
   latitude: number;
   longitude: number;
   distanceKm: number;
-  noteMoyenne?: number;
-  nombreAvis?: number;
-  stockTotal: number;
 }
 
 export interface Produit {
+  idProduit: number;
+  producteurId: number;
+  nomExploitation: string;
+  nomProduit: string;
+  quantiteStock: number;
+  prix: number;
+  typeProduit: string;
+  disponibilite: boolean;
+}
+
+export interface ProducteurProfile {
   id: number;
   nom: string;
-  description: string;
-  prix: number;
-  quantiteDisponible: number;
-  unite: string;
-  producteurId: number;
-  nomProducteur: string;
+  prenom: string;
+  nomExploitation: string;
+  capaciteProduction: number;
+  statut: string;
+  ville: string | null;
+  province: string | null;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface LigneCommande {
+  idLigne: number;
+  produitId: number;
+  nomProduit: string;
+  quantite: number;
+  prixUnitaireFige: number;
+  sousTotal: number;
 }
 
 export interface Commande {
-  id: number;
-  reference: string;
-  quantite: number;
-  montantTotal: number;
-  statut: string;
-  dateCreation: string;
-  produitId: number;
-  produitNom: string;
-  producteurId: number;
-  producteurNom: string;
+  idCommande: number;
+  numeroCommande: string;
   eleveurId: number;
+  nomEleveur: string;
+  producteurId: number;
+  nomExploitation: string;
+  dateCommande: string;
+  statut: string;
+  montantTotal: number;
+  lignes: LigneCommande[];
 }
 
 @Injectable({
@@ -49,76 +74,98 @@ export class MarketplaceService {
 
   constructor(private http: HttpClient) {}
 
-  // Rechercher des producteurs par rayon géographique
-  rechercherProducteursParRayon(latitude: number, longitude: number, rayonKm: number = 50): Observable<{ data: ProducteurLocalise[] }> {
-    return this.http.get<{ data: ProducteurLocalise[] }>(
+  rechercherProducteursParRayon(
+    latitude: number,
+    longitude: number,
+    rayonKm = 50
+  ): Observable<ApiResponse<ProducteurLocalise[]>> {
+    return this.http.get<ApiResponse<ProducteurLocalise[]>>(
       `${this.apiUrl}/marketplace/producteurs/recherche-geolocalisee`,
       { params: { latitude, longitude, rayonKm } }
     );
   }
 
-  // Lister les produits disponibles
-  listerProduits(page: number = 0, size: number = 20): Observable<{ data: Produit[] }> {
-    return this.http.get<{ data: Produit[] }>(
+  listerProduits(page = 0, size = 20): Observable<ApiResponse<PageResponse<Produit>>> {
+    return this.http.get<ApiResponse<PageResponse<Produit>>>(
       `${this.apiUrl}/marketplace/produits`,
       { params: { page, size } }
     );
   }
 
-  // Consulter le catalogue d'un producteur
-  consulterCatalogueProducteur(producteurId: number): Observable<{ data: Produit[] }> {
-    return this.http.get<{ data: Produit[] }>(
+  obtenirProduit(produitId: number): Observable<ApiResponse<Produit>> {
+    return this.http.get<ApiResponse<Produit>>(
+      `${this.apiUrl}/marketplace/produits/${produitId}`
+    );
+  }
+
+  consulterCatalogueProducteur(producteurId: number): Observable<ApiResponse<Produit[]>> {
+    return this.http.get<ApiResponse<Produit[]>>(
       `${this.apiUrl}/marketplace/produits/producteur/${producteurId}`
     );
   }
 
-  // Passer une commande
-  passerCommande(produitId: number, quantite: number, idempotencyKey?: string): Observable<{ data: Commande }> {
-    const body = {
-      produitId,
-      quantite,
-      idempotencyKey: idempotencyKey || `cmd-${Date.now()}`
-    };
-    return this.http.post<{ data: Commande }>(
-      `${this.apiUrl}/marketplace/commandes`,
-      body
+  obtenirProducteur(producteurId: number): Observable<ApiResponse<ProducteurProfile>> {
+    return this.http.get<ApiResponse<ProducteurProfile>>(
+      `${this.apiUrl}/producteurs/${producteurId}`
     );
   }
 
-  // Lister les commandes de l'éleveur connecté
-  listerCommandesEleveur(eleveurId: number, page: number = 0, size: number = 20): Observable<{ data: Commande[] }> {
-    return this.http.get<{ data: Commande[] }>(
+  passerCommande(
+    eleveurId: number,
+    produitId: number,
+    quantite: number,
+    idempotencyKey = `cmd-${crypto.randomUUID()}`
+  ): Observable<ApiResponse<Commande>> {
+    return this.http.post<ApiResponse<Commande>>(
+      `${this.apiUrl}/marketplace/commandes`,
+      { eleveurId, produitId, quantite, idempotencyKey }
+    );
+  }
+
+  listerCommandesEleveur(
+    eleveurId: number,
+    page = 0,
+    size = 20
+  ): Observable<ApiResponse<PageResponse<Commande>>> {
+    return this.http.get<ApiResponse<PageResponse<Commande>>>(
       `${this.apiUrl}/marketplace/commandes/eleveur/${eleveurId}`,
       { params: { page, size } }
     );
   }
 
-  // Lister les commandes du producteur connecté
-  listerCommandesProducteur(producteurId: number, page: number = 0, size: number = 20): Observable<{ data: Commande[] }> {
-    return this.http.get<{ data: Commande[] }>(
+  listerCommandesProducteur(
+    producteurId: number,
+    page = 0,
+    size = 20
+  ): Observable<ApiResponse<PageResponse<Commande>>> {
+    return this.http.get<ApiResponse<PageResponse<Commande>>>(
       `${this.apiUrl}/marketplace/commandes/producteur/${producteurId}`,
       { params: { page, size } }
     );
   }
 
-  // Obtenir les détails d'une commande
-  obtenirCommande(commandeId: number): Observable<{ data: Commande }> {
-    return this.http.get<{ data: Commande }>(
+  obtenirCommande(commandeId: number): Observable<ApiResponse<Commande>> {
+    return this.http.get<ApiResponse<Commande>>(
       `${this.apiUrl}/marketplace/commandes/${commandeId}`
     );
   }
 
-  // Confirmer une commande
-  confirmerCommande(commandeId: number): Observable<{ data: Commande }> {
-    return this.http.post<{ data: Commande }>(
+  confirmerCommande(commandeId: number): Observable<ApiResponse<Commande>> {
+    return this.http.post<ApiResponse<Commande>>(
       `${this.apiUrl}/marketplace/commandes/${commandeId}/confirmer`,
       {}
     );
   }
 
-  // Annuler une commande
-  annulerCommande(commandeId: number, motif?: string): Observable<{ data: Commande }> {
-    return this.http.post<{ data: Commande }>(
+  refuserCommande(commandeId: number): Observable<ApiResponse<Commande>> {
+    return this.http.post<ApiResponse<Commande>>(
+      `${this.apiUrl}/marketplace/commandes/${commandeId}/refuser`,
+      {}
+    );
+  }
+
+  annulerCommande(commandeId: number, motif?: string): Observable<ApiResponse<Commande>> {
+    return this.http.post<ApiResponse<Commande>>(
       `${this.apiUrl}/marketplace/commandes/${commandeId}/annuler`,
       {},
       { params: motif ? { motif } : {} }

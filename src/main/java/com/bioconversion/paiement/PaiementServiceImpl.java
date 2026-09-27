@@ -77,7 +77,7 @@ public class PaiementServiceImpl implements PaiementService {
                         "Commande introuvable : " + idCommande));
 
         if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException(
+            throw new com.bioconversion.common.exception.ForbiddenException(
                     "Vous n'êtes pas autorisé à initier un paiement pour cette commande");
         }
 
@@ -174,11 +174,21 @@ public class PaiementServiceImpl implements PaiementService {
 
         if (!paiement.getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
                 && !paiement.getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
-            throw new com.bioconversion.common.exception.UnauthorizedException(
+            throw new com.bioconversion.common.exception.ForbiddenException(
                     "Vous n'êtes pas autorisé à consulter ce paiement");
         }
 
         return paiement;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal totalPaiementsConfirmesProducteur(Long producteurId, Long currentUserId) {
+        if (producteurId == null || !producteurId.equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException(
+                    "Vous n'êtes pas autorisé à consulter ce solde");
+        }
+        return paiementRepository.sumConfirmedPaymentsByProducteurId(producteurId);
     }
 
     private Paiement trouverParReference(String referenceTransaction) {
