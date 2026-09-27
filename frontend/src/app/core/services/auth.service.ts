@@ -19,7 +19,7 @@ export class AuthService {
   }
 
   login(credentials: AuthRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, credentials).pipe(
+    return this.http.post<AuthResponse>(`${this.apiUrl}/api/v1/auth/login`, credentials).pipe(
       tap(response => {
         this.setToken(response.token);
         this.currentUserSubject.next(response.utilisateur);
@@ -31,11 +31,11 @@ export class AuthService {
   }
 
   registerProducteur(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/register/producteur`, data);
+    return this.http.post(`${this.apiUrl}/api/v1/auth/register/producteur`, data);
   }
 
   registerEleveur(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/register/eleveur`, data);
+    return this.http.post(`${this.apiUrl}/api/v1/auth/register/eleveur`, data);
   }
 
   logout(): void {
