@@ -21,10 +21,8 @@ import { AuthService } from '../../../core/services/auth.service';
         <!-- Header -->
         <div class="text-center mb-10">
           <div class="flex items-center justify-center mb-6">
-            <div class="w-16 h-16 rounded-full border-3 border-wine flex items-center justify-center mr-4 bg-green-soft">
-              <svg class="w-10 h-10 text-wine" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm1 2.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5z"/>
-              </svg>
+            <div class="w-16 h-16 rounded-full border-3 border-wine flex items-center justify-center mr-4 bg-green-soft overflow-hidden">
+              <img src="assets/logo.png" alt="BioConversion Logo" class="w-13 h-13 object-contain">
             </div>
             <h1 class="text-3xl font-serif text-wine font-bold">Inscription Producteur</h1>
           </div>
@@ -284,10 +282,15 @@ export class InscriptionProducteurComponent {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Remove confirmation field before sending to API
-    const { confirmationMotDePasse, ...registrationData } = this.inscriptionForm.value;
+    // Remove confirmation field and empty values before sending to API
+    const { confirmationMotDePasse, latitude, longitude, ...registrationData } = this.inscriptionForm.value;
 
-    this.authService.registerProducteur(registrationData).subscribe({
+    // Remove empty optional fields
+    const cleanedData = Object.fromEntries(
+      Object.entries(registrationData).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+    );
+
+    this.authService.registerProducteur(cleanedData).subscribe({
       next: (response) => {
         this.isLoading = false;
         this.router.navigate(['/connexion']);

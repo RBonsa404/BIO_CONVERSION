@@ -2,10 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens from mockup */
+:root {
+  --wine: #64102f;
+  --wine-dark: #3f0820;
+  --green: #4e7d3f;
+  --green-soft: #e8f0df;
+  --cream: #f7f4ea;
+  --text: #3f4a57;
+  --line: #ddd9cd;
+}
+
 /* Custom global styles */
 body {
   font-family: 'Inter', Arial, Helvetica, sans-serif;
-  color: #3f4a57;
+  color: var(--text);
+  background-color: var(--cream);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -15,3 +27,25 @@ h1, h2, h3, h4, h5, h6 {
 .font-script {
   font-family: 'Caveat', cursive;
 }
+
+/* Utility classes matching mockup */
+.bg-wine { background-color: var(--wine); }
+.bg-wine-dark { background-color: var(--wine-dark); }
+.bg-green { background-color: var(--green); }
+.bg-green-soft { background-color: var(--green-soft); }
+.bg-cream { background-color: var(--cream); }
+.bg-line { background-color: var(--line); }
+
+.text-wine { color: var(--wine); }
+.text-wine-dark { color: var(--wine-dark); }
+.text-green { color: var(--green); }
+.text-text { color: var(--text); }
+.text-line { color: var(--line); }
+
+.border-wine { border-color: var(--wine); }
+.border-green { border-color: var(--green); }
+.border-line { border-color: var(--line); }
+
+.hover\:bg-wine-dark:hover { background-color: var(--wine-dark); }
+.hover\:text-wine:hover { color: var(--wine); }
+.hover\:border-wine:hover { border-color: var(--wine); }
