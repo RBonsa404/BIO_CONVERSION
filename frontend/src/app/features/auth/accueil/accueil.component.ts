@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
             <!-- Logo -->
             <div class="flex items-center justify-center mb-8">
               <div class="w-24 h-24 rounded-full border-4 border-wine flex items-center justify-center mr-6 bg-green-soft shadow-lg overflow-hidden">
-                <img src="assets/logo.png" alt="BioConversion Logo" class="w-20 h-20 object-contain">
+                <img src="logo.png" alt="BioConversion Logo" class="w-20 h-20 object-contain">
               </div>
               <h1 class="text-5xl md:text-6xl font-serif text-wine font-bold tracking-tight">BioConversion</h1>
             </div>
@@ -174,7 +174,7 @@ import { CommonModule } from '@angular/common';
           <div class="flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center mb-4 md:mb-0">
               <div class="w-10 h-10 rounded-full border-2 border-wine flex items-center justify-center mr-3 bg-green-soft overflow-hidden">
-                <img src="assets/logo.png" alt="BioConversion Logo" class="w-8 h-8 object-contain">
+                <img src="logo.png" alt="BioConversion Logo" class="w-8 h-8 object-contain">
               </div>
               <span class="text-xl font-serif text-wine font-bold">BioConversion</span>
             </div>

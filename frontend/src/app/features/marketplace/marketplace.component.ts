@@ -16,8 +16,8 @@ import { RouterModule } from '@angular/router';
             <div class="flex items-center">
               <a [routerLink]="['/']" class="flex items-center group">
                 <div class="w-12 h-12 rounded-full border-3 border-wine flex items-center justify-center mr-4 bg-green-soft group-hover:bg-wine group-hover:border-white transition-all overflow-hidden">
-                  <img src="assets/logo.png" alt="BioConversion Logo" class="w-9 h-9 object-contain group-hover:hidden">
-                  <img src="assets/logo.png" alt="BioConversion Logo" class="w-9 h-9 object-contain hidden group-hover:block invert">
+                  <img src="logo.png" alt="BioConversion Logo" class="w-9 h-9 object-contain group-hover:hidden">
+                  <img src="logo.png" alt="BioConversion Logo" class="w-9 h-9 object-contain hidden group-hover:block invert">
                 </div>
                 <span class="text-2xl font-serif text-wine font-bold group-hover:text-wine-dark transition-colors">BioConversion</span>
               </a>

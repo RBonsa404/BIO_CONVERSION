@@ -21,7 +21,7 @@ import { CommonModule } from '@angular/common';
         <div class="text-center mb-10">
           <div class="flex items-center justify-center mb-6">
             <div class="w-16 h-16 rounded-full border-3 border-wine flex items-center justify-center mr-4 bg-green-soft overflow-hidden">
-              <img src="assets/logo.png" alt="BioConversion Logo" class="w-13 h-13 object-contain">
+              <img src="logo.png" alt="BioConversion Logo" class="w-13 h-13 object-contain">
             </div>
             <h1 class="text-3xl font-serif text-wine font-bold">Connexion</h1>
           </div>
