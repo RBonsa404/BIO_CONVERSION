@@ -62,6 +62,24 @@ risque est accepté pour la version actuelle; toute évolution des exigences de
 sécurité devrait privilégier une migration vers un cookie `httpOnly`, posé et
 renouvelé par le backend.
 
+## Comptes de test en local
+
+Avec le backend démarré en profil Spring `dev`, ces comptes permettent de
+parcourir les principaux rôles de l'application. La base de données PostgreSQL
+locale doit être disponible; consultez le README backend pour son lancement.
+
+| Profil | Téléphone | Mot de passe | Statut initial |
+|---|---|---|---|
+| Producteur validé | `+226 70 00 00 01` | `TestPass123!` | ACTIF |
+| Producteur en attente | `+226 70 00 00 02` | `TestPass123!` | EN_ATTENTE_VALIDATION |
+| Éleveur pisciculteur | `+226 70 00 00 03` | `TestPass123!` | ACTIF |
+| Éleveur aviculteur | `+226 70 00 00 04` | `TestPass123!` | ACTIF |
+| Administrateur | `+226 70 00 00 05` | `TestPass123!` | ACTIF |
+
+Ces comptes et leurs produits sont créés idempotemment uniquement au démarrage
+du backend avec le profil `dev`. Ils sont réservés au développement local et
+ne doivent jamais être activés en production.
+
 ## Structure du projet
 
 ```

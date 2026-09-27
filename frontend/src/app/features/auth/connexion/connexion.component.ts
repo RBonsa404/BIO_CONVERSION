@@ -19,9 +19,9 @@ import { CommonModule } from '@angular/common';
       <!-- Login card -->
       <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full relative z-10 border border-line">
         <div class="text-center mb-10">
-          <div class="flex items-center justify-center mb-6">
-            <div class="w-16 h-16 rounded-full border-3 border-wine flex items-center justify-center mr-4 bg-green-soft overflow-hidden">
-              <img src="logo.png" alt="BioConversion Logo" class="w-13 h-13 object-contain">
+          <div class="mb-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-0">
+            <div class="mr-0 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-wine bg-green-soft sm:mr-4">
+              <img src="/logo.png" alt="Emblème BioConversion" class="h-full w-full object-contain">
             </div>
             <h1 class="text-3xl font-serif text-wine font-bold">Connexion</h1>
           </div>

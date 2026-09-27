@@ -10,15 +10,15 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   template: `
-    <div class="min-h-screen bg-cream flex items-center justify-center p-8">
-      <div class="bg-white rounded-3xl shadow-2xl p-12 max-w-2xl w-full border border-line">
+    <div class="min-h-screen bg-cream px-5 py-8">
+      <div class="mx-auto w-full max-w-6xl rounded-3xl border border-line bg-white p-6 shadow-lg md:p-10">
         <!-- Header -->
-        <div class="text-center mb-10">
-          <div class="flex items-center justify-center mb-6">
-            <div class="w-20 h-20 rounded-full border-4 border-wine flex items-center justify-center mr-4 bg-green-soft overflow-hidden">
-              <img src="logo.png" alt="BioConversion Logo" class="w-16 h-16 object-contain">
+        <div class="mb-8 text-left">
+          <div class="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-wine bg-green-soft sm:mr-4">
+              <img src="/logo.png" alt="Emblème BioConversion" class="h-full w-full object-contain">
             </div>
-            <h1 class="text-4xl font-serif text-wine font-bold">Inscription Producteur</h1>
+            <h1 class="font-serif text-4xl font-bold text-wine md:text-5xl">Inscription producteur</h1>
           </div>
           <p class="text-text text-lg">Rejoignez la communauté BioConversion</p>
         </div>
@@ -26,7 +26,7 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
         <!-- Form -->
         <form [formGroup]="inscriptionForm" (ngSubmit)="onSubmit()">
           <!-- Personal Info -->
-          <div class="mb-8 p-6 bg-green-soft rounded-2xl border-2 border-green">
+          <div class="mb-8 rounded-2xl border-b border-line pb-7">
             <h3 class="text-xl font-serif text-wine font-semibold mb-6 flex items-center">
               <span class="w-8 h-8 bg-wine rounded-full flex items-center justify-center mr-3">
                 <span class="text-white font-bold">1</span>
@@ -69,7 +69,7 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
           </div>
 
           <!-- Account Info -->
-          <div class="mb-8 p-6 bg-green-soft rounded-2xl border-2 border-green">
+          <div class="mb-8 rounded-2xl border-b border-line pb-7">
             <h3 class="text-xl font-serif text-wine font-semibold mb-6 flex items-center">
               <span class="w-8 h-8 bg-wine rounded-full flex items-center justify-center mr-3">
                 <span class="text-white font-bold">2</span>
@@ -102,7 +102,7 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
           </div>
 
           <!-- Farm Info -->
-          <div class="mb-8 p-6 bg-green-soft rounded-2xl border-2 border-green">
+          <div class="mb-8 rounded-2xl border-b border-line pb-7">
             <h3 class="text-xl font-serif text-wine font-semibold mb-6 flex items-center">
               <span class="w-8 h-8 bg-wine rounded-full flex items-center justify-center mr-3">
                 <span class="text-white font-bold">3</span>
