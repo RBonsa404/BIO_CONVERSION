@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom global styles */
+body {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  color: #3f4a57;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.font-script {
+  font-family: 'Caveat', cursive;
+}
