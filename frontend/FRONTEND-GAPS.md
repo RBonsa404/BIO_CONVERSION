@@ -4,6 +4,12 @@ Ce document documente les fonctionnalités présentes dans la maquette HTML mais
 
 ## Écarts identifiés
 
+### 0. Panier multi-produits (écran 6)
+
+**Décision produit :** le panier multi-produits est souhaité comme évolution, mais ne fait pas partie de cette correction de navigation. Le flux actuel crée une commande pour un seul produit; aucun panier n'est implémenté ici.
+
+**Action requise :** concevoir et implémenter ultérieurement un panier multi-produits, puis vérifier son impact sur la création, la livraison et la facturation des commandes.
+
 ### 1. Notes et avis producteurs (écrans 5 et 6)
 
 **Description :** La maquette affiche des étoiles de notation et des compteurs d'avis (ex. "(18 avis)") sur les fiches producteurs.

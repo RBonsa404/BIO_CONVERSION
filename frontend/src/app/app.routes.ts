@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { AccueilComponent } from './features/auth/accueil/accueil.component';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/accueil', pathMatch: 'full' },
@@ -9,6 +9,8 @@ export const routes: Routes = [
   { path: 'inscription/eleveur', loadComponent: () => import('./features/auth/inscription-eleveur/inscription-eleveur.component').then(m => m.InscriptionEleveurComponent) },
   { path: 'dashboard/producteur', loadComponent: () => import('./features/producteur-dashboard/producteur-dashboard.component').then(m => m.ProducteurDashboardComponent) },
   { path: 'marketplace', loadComponent: () => import('./features/marketplace/marketplace.component').then(m => m.MarketplaceComponent) },
+  { path: 'mes-commandes', canActivate: [authGuard], loadComponent: () => import('./features/marketplace/mes-commandes/mes-commandes.component').then(m => m.MesCommandesComponent) },
+  { path: 'historique', canActivate: [authGuard], loadComponent: () => import('./features/marketplace/historique/historique.component').then(m => m.HistoriqueComponent) },
   { path: 'producteur/:id', loadComponent: () => import('./features/marketplace/producteur-detail/producteur-detail.component').then(m => m.ProducteurDetailComponent) },
   { path: 'commande', loadComponent: () => import('./features/commande/commande.component').then(m => m.CommandeComponent) },
   { path: 'confirmation', loadComponent: () => import('./features/commande/confirmation/confirmation.component').then(m => m.ConfirmationComponent) },
