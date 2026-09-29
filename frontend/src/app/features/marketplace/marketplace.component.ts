@@ -17,9 +17,12 @@ import { MarketplaceService, ProducteurLocalise, Produit } from '../../core/serv
             BioConversion
           </a>
           <div class="hidden items-center gap-12 text-text md:flex">
-            <a routerLink="/marketplace" class="border-b-2 border-green px-2 py-4 font-semibold text-green">Rechercher</a>
-            <span class="px-2 py-4 text-gray-400">Mes commandes</span>
-            <span class="px-2 py-4 text-gray-400">Historique</span>
+            <a routerLink="/marketplace" routerLinkActive="border-b-2 border-green text-green"
+              [routerLinkActiveOptions]="{ exact: true }" class="px-2 py-4 font-semibold hover:text-green">Rechercher</a>
+            <a routerLink="/mes-commandes" routerLinkActive="border-b-2 border-green text-green"
+              [routerLinkActiveOptions]="{ exact: true }" class="px-2 py-4 font-semibold hover:text-green">Mes commandes</a>
+            <a routerLink="/historique" routerLinkActive="border-b-2 border-green text-green"
+              [routerLinkActiveOptions]="{ exact: true }" class="px-2 py-4 font-semibold hover:text-green">Historique</a>
           </div>
           <span class="grid h-12 w-12 place-items-center rounded-full bg-green-soft text-green" aria-hidden="true">
             <svg viewBox="0 0 24 24" class="h-7 w-7" fill="currentColor">

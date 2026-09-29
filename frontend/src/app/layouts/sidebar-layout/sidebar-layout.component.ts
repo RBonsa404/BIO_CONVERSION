@@ -7,6 +7,7 @@ type DashboardArea = 'producer' | 'admin';
 interface SidebarLink {
   label: string;
   route: string;
+  fragment?: string;
   icon: 'dashboard' | 'marketplace' | 'sensors' | 'users' | 'orders' | 'chart';
 }
 
@@ -27,6 +28,7 @@ interface SidebarLink {
         <nav aria-label="Navigation principale" class="relative z-10 flex gap-2 overflow-x-auto p-3 md:block md:space-y-3 md:p-4">
           <a *ngFor="let link of links"
              [routerLink]="link.route"
+             [fragment]="link.fragment"
              routerLinkActive="bg-white/15 text-white"
              [routerLinkActiveOptions]="{ exact: true }"
              class="flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white">
@@ -85,9 +87,9 @@ export class SidebarLayoutComponent {
   private static readonly producerLinks: SidebarLink[] = [
     { label: 'Tableau de bord', route: '/dashboard/producteur', icon: 'dashboard' },
     { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' },
-    { label: 'Commandes', route: '/dashboard/producteur#commandes', icon: 'orders' },
+    { label: 'Commandes', route: '/dashboard/producteur', fragment: 'commandes', icon: 'orders' },
     { label: 'Capteurs IoT', route: '/iot', icon: 'sensors' },
-    { label: 'Statistiques', route: '/dashboard/producteur#stats', icon: 'chart' }
+    { label: 'Statistiques', route: '/dashboard/producteur', fragment: 'stats', icon: 'chart' }
   ];
 
   private static readonly adminLinks: SidebarLink[] = [
