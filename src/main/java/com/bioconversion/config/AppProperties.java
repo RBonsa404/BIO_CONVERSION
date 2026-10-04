@@ -25,6 +25,10 @@ import java.util.List;
  *   security:
  *     allowed-origins:
  *       - http://localhost:3000
+ *   commission:
+ *     taux: 0.05
+ *   entreprise:
+ *     nom: "BIO CONVERSION"
  * </pre>
  * </p>
  */
@@ -38,7 +42,15 @@ public record AppProperties(
 
                 UploadProperties upload,
 
-                CommissionProperties commission
+                @NotNull @Valid CommissionProperties commission,
+
+                @NotNull @Valid EntrepriseProperties entreprise,
+
+                PaiementProperties paiement,
+
+                FacturesProperties factures,
+
+                IotProperties iot
 
 ) {
 
@@ -48,14 +60,54 @@ public record AppProperties(
         }
 
         public record SecurityProperties(
-                        List<String> allowedOrigins) {
+                        String allowedOrigins) {
         }
 
         public record UploadProperties(
                         String identiteDir) {
         }
 
+        public record FacturesProperties(
+                        String dossier) {
+        }
+
+        /**
+         * C-MUST-5 (CDC v1.1) : taux de commission perçu par la plateforme sur
+         * chaque transaction. Paramétrable côté administration, jamais codé en dur
+         * dans FactureService.
+         */
         public record CommissionProperties(
-                        double taux) {
+                        @Positive double taux) {
+        }
+
+        /**
+         * Informations légales de l'entreprise, affichées sur les factures.
+         * Valeurs placeholder tant que les données fiscales réelles (IFU, RCCM,
+         * coordonnées bancaires) ne sont pas fournies par la MOA — à remplacer
+         * directement dans application.yml quand elles seront disponibles.
+         */
+        public record EntrepriseProperties(
+                        @NotBlank String nom,
+                        String ifu,
+                        String rccm,
+                        String adresse,
+                        String telephone,
+                        String email,
+                        String banque,
+                        String iban) {
+        }
+
+        /**
+         * Configuration du module de paiement, notamment la sécurité du webhook.
+         */
+        public record PaiementProperties(
+                        @NotBlank String webhookSecret) {
+        }
+
+        /**
+         * Configuration du module IoT pour l'authentification par API key.
+         */
+        public record IotProperties(
+                        @NotBlank String apiKey) {
         }
 }

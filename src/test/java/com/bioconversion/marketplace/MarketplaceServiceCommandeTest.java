@@ -7,6 +7,9 @@ import com.bioconversion.utilisateur.Eleveur;
 import com.bioconversion.utilisateur.EleveurRepository;
 import com.bioconversion.utilisateur.Producteur;
 import com.bioconversion.utilisateur.ProducteurRepository;
+import com.bioconversion.utilisateur.StatutUtilisateur;
+
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -87,7 +91,7 @@ class MarketplaceServiceCommandeTest {
         produit = Produit.builder()
                 .idProduit(100L)
                 .nomProduit("Larves BSFL fraîches")
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .quantiteStock(50.0)
                 .disponibilite(true)
                 .typeProduit(TypeProduit.LARVE)
@@ -123,8 +127,8 @@ class MarketplaceServiceCommandeTest {
 
         LigneCommande ligne = commande.getLignes().get(0);
         assertEquals(20.0, ligne.getQuantite());
-        assertEquals(1500.0, ligne.getPrixUnitaireFige(), "Le prix unitaire doit être figé à 1500 FCFA");
-        assertEquals(30000.0, ligne.calculerSousTotal());
+        assertEquals(0, BigDecimal.valueOf(1500.0).compareTo(ligne.getPrixUnitaireFige()), "Le prix unitaire doit être figé à 1500 FCFA");
+        assertEquals(0, BigDecimal.valueOf(30000.0).compareTo(ligne.calculerSousTotal()));
 
         // Vérification de la décrémentation du stock (50 - 20 = 30)
         assertEquals(30.0, produit.getQuantiteStock());
@@ -348,6 +352,31 @@ class MarketplaceServiceCommandeTest {
     }
 
     @Test
+    @DisplayName("Le producteur assigné peut refuser une commande en attente")
+    void refuserCommande_ProducteurAssigne_RestitueLeStock() {
+        LigneCommande ligne = LigneCommande.builder()
+                .produit(produit)
+                .quantite(5.0)
+                .build();
+        Commande commande = Commande.builder()
+                .idCommande(21L)
+                .producteur(producteur)
+                .statut(StatutCommande.EN_ATTENTE)
+                .lignes(new ArrayList<>(List.of(ligne)))
+                .build();
+
+        when(commandeRepository.findById(21L)).thenReturn(Optional.of(commande));
+        when(commandeRepository.save(any(Commande.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(produitRepository.findById(100L)).thenReturn(Optional.of(produit));
+        when(produitRepository.save(any(Produit.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Commande refusee = marketplaceService.refuserCommande(21L, 1L);
+
+        assertEquals(StatutCommande.REFUSE, refusee.getStatut());
+        assertEquals(55.0, produit.getQuantiteStock());
+    }
+
+    @Test
     @DisplayName("Devrait rejeter la confirmation par un producteur non assigné")
     void confirmerCommande_ProducteurNonAssigne_LeveException() {
         Commande commande = Commande.builder()
@@ -376,7 +405,7 @@ class MarketplaceServiceCommandeTest {
 
         when(commandeRepository.findById(20L)).thenReturn(Optional.of(commande));
         when(commandeRepository.save(any(Commande.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(producteurRepository.findByCompteValideTrue(any(Pageable.class))).thenReturn(Page.empty());
+        when(producteurRepository.findByStatut(eq(StatutUtilisateur.ACTIF), any(Pageable.class))).thenReturn(Page.empty());
 
         assertThrows(BusinessException.class, () ->
                 marketplaceService.confirmerCommande(20L, 1L));
@@ -403,7 +432,7 @@ class MarketplaceServiceCommandeTest {
                 .thenReturn(List.of(cmd1));
         when(commandeRepository.findById(101L)).thenReturn(Optional.of(cmd1));
         when(commandeRepository.save(any(Commande.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(producteurRepository.findByCompteValideTrue(any(Pageable.class))).thenReturn(Page.empty());
+        when(producteurRepository.findByStatut(eq(StatutUtilisateur.ACTIF), any(Pageable.class))).thenReturn(Page.empty());
 
         List<Commande> expirees = marketplaceService.expirerCommandesNonConfirmees();
 

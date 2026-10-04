@@ -1,6 +1,7 @@
 package com.bioconversion.config;
 
 import com.bioconversion.security.JwtAuthenticationFilter;
+import com.bioconversion.security.IotApiKeyFilter;
 import com.bioconversion.security.BioUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Configuration Spring Security.
@@ -48,13 +50,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final IotApiKeyFilter iotApiKeyFilter;
     private final BioUserDetailsService userDetailsService;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // CSRF désactivé : API REST stateless (ADR-002)
                 .csrf(AbstractHttpConfigurer::disable)
+
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
                 // Politique de session : STATELESS (JWT)
                 .sessionManagement(sm -> sm
@@ -64,6 +70,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // ── Endpoints publics ──────────────────────────────
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register/**",
                                 "/api/v1/auth/login")
@@ -81,9 +88,9 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .permitAll()
 
-                        // ── Module A — IoT ────────────────────────────────
+                        // ── Module A — IoT — Uses API key authentication (not JWT)
                         .requestMatchers("/api/v1/iot/**")
-                        .hasAnyRole("PRODUCTEUR", "ADMINISTRATEUR")
+                        .permitAll()
 
                         // ── Module B — Marketplace ────────────────────────
                         .requestMatchers("/api/v1/marketplace/**")
@@ -91,6 +98,8 @@ public class SecurityConfig {
 
                         // ── Module C — Paiement ───────────────────────────
                         .requestMatchers("/api/v1/paiements/**")
+                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
+                        .requestMatchers("/api/v1/factures/**")
                         .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
 
                         // ── Module D — Réseau Producteurs ─────────────────
@@ -105,6 +114,9 @@ public class SecurityConfig {
 
                 // Fournisseur d'authentification DAO
                 .authenticationProvider(authenticationProvider())
+
+                // Filtre IoT API key pour les endpoints IoT (avant JWT)
+                .addFilterBefore(iotApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Filtre JWT avant le filtre standard d'authentification
                 .addFilterBefore(jwtAuthenticationFilter,

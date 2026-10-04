@@ -38,3 +38,9 @@ application-prod-secrets.yml
 # Rapports de test
 /test-output/
 /surefire-reports/
+
+
+CLAUDE.md
+.claude/
+factures/
+diff.txt

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 /**
  * Entité LigneCommande — Module B Marketplace.
  *
@@ -62,15 +64,15 @@ public class LigneCommande {
      * NE PAS le modifier après création.
      */
     @Positive(message = "Le prix unitaire figé doit être strictement positif")
-    @Column(name = "prix_unitaire_fige", nullable = false)
-    private double prixUnitaireFige;
+    @Column(name = "prix_unitaire_fige", nullable = false, precision = 19, scale = 4)
+    private BigDecimal prixUnitaireFige;
 
     /**
      * Calcule le sous-total de cette ligne (quantité × prix figé).
      *
      * @return sous-total en FCFA
      */
-    public double calculerSousTotal() {
-        return quantite * prixUnitaireFige;
+    public BigDecimal calculerSousTotal() {
+        return prixUnitaireFige.multiply(BigDecimal.valueOf(quantite));
     }
 }

@@ -1,0 +1,9 @@
+.git
+.mvn
+target
+frontend
+factures
+*.md
+mvnw
+mvnw.cmd
+docker-compose.yml

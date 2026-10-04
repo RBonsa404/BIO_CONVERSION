@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,7 +35,7 @@ class MarketplaceServiceStockTest {
                 .idProduit(5L)
                 .nomProduit("Larves BSFL fraîches")
                 .quantiteStock(100.0)
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .typeProduit(TypeProduit.LARVE)
                 .disponibilite(true)
                 .build();
@@ -58,7 +59,7 @@ class MarketplaceServiceStockTest {
                 .idProduit(5L)
                 .nomProduit("Larves BSFL fraîches")
                 .quantiteStock(100.0)
-                .prix(1500.0)
+                .prix(BigDecimal.valueOf(1500.0))
                 .typeProduit(TypeProduit.LARVE)
                 .disponibilite(true)
                 .build();
@@ -70,7 +71,7 @@ class MarketplaceServiceStockTest {
         Produit produitPrixMaj = marketplaceService.modifierPrix(5L, 1800.0);
 
         // Then : Le nouveau prix doit être pris en compte
-        assertEquals(1800.0, produitPrixMaj.getPrix(), "Le nouveau prix doit être de 1800 FCFA");
+        assertEquals(0, BigDecimal.valueOf(1800.0).compareTo(produitPrixMaj.getPrix()), "Le nouveau prix doit être de 1800 FCFA");
     }
 
     @Test

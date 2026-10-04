@@ -88,21 +88,13 @@ public class Localisation {
     // ─── Méthode utilitaire ────────────────────────────────────────────────
 
     /**
-     * Calcule la distance en kilomètres entre deux localisations (formule
-     * Haversine).
-     * TODO Module D : implémenter et tester cette méthode.
+     * Calcule la distance en kilomètres entre deux localisations (formule Haversine).
+     * Implémentation Module B — OUATTARA Chaïda (cf. document de dispatch §2.1).
      *
      * @param autre l'autre localisation
-     * @return distance en km
+     * @return distance en kilomètres
      */
-    /**
- * Calcule la distance en kilomètres entre deux localisations (formule Haversine).
- * Implémentation Module B — OUATTARA Chaïda (cf. document de dispatch §2.1).
- *
- * @param autre l'autre localisation
- * @return distance en kilomètres
- */
-public double calculerDistance(Localisation autre) {
+    public double calculerDistance(Localisation autre) {
         final double RAYON_TERRE_KM = 6371.0;
 
         double lat1 = Math.toRadians(this.latitude);

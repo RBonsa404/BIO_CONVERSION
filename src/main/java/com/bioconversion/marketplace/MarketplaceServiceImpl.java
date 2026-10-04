@@ -11,11 +11,13 @@ import com.bioconversion.utilisateur.Producteur;
 import com.bioconversion.utilisateur.ProducteurRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,6 +40,21 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     @Transactional(readOnly = true)
     public Page<Produit> listerProduitsDisponibles(Pageable pageable) {
         return produitRepository.findByDisponibiliteTrue(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProduitDto> listerProduitsDisponiblesDto(Pageable pageable) {
+        return produitRepository.findByDisponibiliteTrue(pageable).map(this::versProduitDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProduitDto obtenirProduitDto(Long produitId) {
+        Produit produit = produitRepository.findById(produitId)
+                .filter(Produit::isDisponibilite)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit indisponible : " + produitId));
+        return versProduitDto(produit);
     }
 
     @Override
@@ -82,7 +99,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
             }
 
             // Décrémenter le stock via le canal exposé par OUATTARA
-            modifierStock(produitId, produit.getQuantiteStock() - quantite);
+            modifierStockWithRetry(produitId, produit.getQuantiteStock() - quantite, null, 3);
 
             // Créer la commande (statut initial EN_ATTENTE)
             Commande commande = Commande.builder()
@@ -98,7 +115,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                     .commande(commande)
                     .produit(produit)
                     .quantite(quantite)
-                    .prixUnitaireFige(produit.getPrix())
+                    .prixUnitaireFige(produit.getPrix() != null ? produit.getPrix() : BigDecimal.ZERO)
                     .build();
 
             commande.ajouterLigne(ligne);
@@ -185,9 +202,53 @@ public class MarketplaceServiceImpl implements MarketplaceService {
 
     @Override
     @Transactional
+    public Commande refuserCommande(Long commandeId, Long producteurId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (producteurId == null || !commande.getProducteur().getIdUtilisateur().equals(producteurId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException(
+                    "Seul le producteur assigné à cette commande peut la refuser");
+        }
+        if (commande.getStatut() != StatutCommande.EN_ATTENTE) {
+            throw new BusinessException("Seule une commande EN_ATTENTE peut être refusée");
+        }
+
+        return changerStatutCommande(commandeId, StatutCommande.REFUSE);
+    }
+
+    @Override
+    @Transactional
     public Commande annulerCommande(Long commandeId, String motif) {
         Commande commande = commandeRepository.findById(commandeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (commande.getStatut() == StatutCommande.LIVRE || commande.getStatut() == StatutCommande.EXPEDIE
+                || commande.getStatut() == StatutCommande.ANNULE || commande.getStatut() == StatutCommande.REFUSE
+                || commande.getStatut() == StatutCommande.NON_CONFIRMEE) {
+            throw new BusinessException("Impossible d'annuler une commande avec le statut " + commande.getStatut());
+        }
+
+        OffsetDateTime limite12h = commande.getDateCommande().plusHours(12);
+        if (OffsetDateTime.now().isAfter(limite12h)) {
+            throw new BusinessException("L'annulation automatique n'est plus possible au-delà de 12h après le passage de la commande. "
+                    + "Veuillez contacter le service client pour un traitement manuel (motif : "
+                    + (motif != null && !motif.isBlank() ? motif : "non précisé") + ").");
+        }
+
+        return changerStatutCommande(commandeId, StatutCommande.ANNULE);
+    }
+
+    @Override
+    @Transactional
+    public Commande annulerCommande(Long commandeId, String motif, Long currentUserId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !commande.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à annuler cette commande");
+        }
 
         if (commande.getStatut() == StatutCommande.LIVRE || commande.getStatut() == StatutCommande.EXPEDIE
                 || commande.getStatut() == StatutCommande.ANNULE || commande.getStatut() == StatutCommande.REFUSE
@@ -210,6 +271,20 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     public Commande trouverCommandeParId(Long commandeId) {
         return commandeRepository.findById(commandeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Commande trouverCommandeParId(Long commandeId, Long currentUserId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        if (!commande.getEleveur().getIdUtilisateur().equals(currentUserId) 
+                && !commande.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à accéder à cette commande");
+        }
+
+        return commande;
     }
 
     @Override
@@ -260,7 +335,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 Produit p = ligne.getProduit();
                 if (p != null) {
                     double stockActuel = p.getQuantiteStock();
-                    modifierStock(p.getIdProduit(), stockActuel + ligne.getQuantite());
+                    modifierStockWithRetry(p.getIdProduit(), stockActuel + ligne.getQuantite(), null, 3);
                 }
             }
         }
@@ -279,10 +354,37 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     @Override
     @Transactional
     public Produit modifierStock(Long produitId, double nouvelleQuantite) {
-        Produit produit = produitRepository.findById(produitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
-        produit.setQuantiteStock(nouvelleQuantite);
-        return produitRepository.save(produit);
+        return modifierStockWithRetry(produitId, nouvelleQuantite, null, 3);
+    }
+
+    @Override
+    @Transactional
+    public Produit modifierStock(Long produitId, double nouvelleQuantite, Long currentUserId) {
+        return modifierStockWithRetry(produitId, nouvelleQuantite, currentUserId, 3);
+    }
+
+    private Produit modifierStockWithRetry(Long produitId, double nouvelleQuantite, Long currentUserId, int maxRetries) {
+        int attempts = 0;
+        while (attempts < maxRetries) {
+            try {
+                Produit produit = produitRepository.findById(produitId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+                
+                if (currentUserId != null && !produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+                    throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à modifier ce produit");
+                }
+                
+                produit.setQuantiteStock(nouvelleQuantite);
+                return produitRepository.save(produit);
+            } catch (OptimisticLockingFailureException e) {
+                attempts++;
+                if (attempts >= maxRetries) {
+                    throw new BusinessException("Le produit a été modifié par une autre transaction. Veuillez réessayer.");
+                }
+                log.warn("Optimistic lock conflict on produit {}, attempt {}/{}", produitId, attempts, maxRetries);
+            }
+        }
+        throw new BusinessException("Échec de la modification du stock après " + maxRetries + " tentatives");
     }
 
     @Override
@@ -290,7 +392,21 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     public Produit modifierPrix(Long produitId, double nouveauPrix) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
-        produit.setPrix(nouveauPrix);
+        produit.setPrix(BigDecimal.valueOf(nouveauPrix));
+        return produitRepository.save(produit);
+    }
+
+    @Override
+    @Transactional
+    public Produit modifierPrix(Long produitId, double nouveauPrix, Long currentUserId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+
+        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à modifier ce produit");
+        }
+
+        produit.setPrix(BigDecimal.valueOf(nouveauPrix));
         return produitRepository.save(produit);
     }
 
@@ -299,6 +415,20 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     public void retirerProduit(Long produitId) {
         Produit produit = produitRepository.findById(produitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        produit.setDisponibilite(false);
+        produitRepository.save(produit);
+    }
+
+    @Override
+    @Transactional
+    public void retirerProduit(Long produitId, Long currentUserId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        
+        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException("Vous n'êtes pas autorisé à retirer ce produit");
+        }
+        
         produit.setDisponibilite(false);
         produitRepository.save(produit);
     }
@@ -313,17 +443,22 @@ public class MarketplaceServiceImpl implements MarketplaceService {
     @Transactional(readOnly = true)
     public List<ProduitDto> consulterCatalogueProducteurDto(Long producteurId) {
         return produitRepository.findByProducteurIdUtilisateur(producteurId).stream()
-                .map(p -> ProduitDto.builder()
-                        .idProduit(p.getIdProduit())
-                        .producteurId(p.getProducteur().getIdUtilisateur())
-                        .nomExploitation(p.getProducteur().getNomExploitation())
-                        .nomProduit(p.getNomProduit())
-                        .quantiteStock(p.getQuantiteStock())
-                        .prix(p.getPrix())
-                        .typeProduit(p.getTypeProduit())
-                        .disponibilite(p.isDisponibilite())
-                        .build())
+                .filter(Produit::isDisponibilite)
+                .map(this::versProduitDto)
                 .collect(Collectors.toList());
+    }
+
+    private ProduitDto versProduitDto(Produit produit) {
+        return ProduitDto.builder()
+                .idProduit(produit.getIdProduit())
+                .producteurId(produit.getProducteur().getIdUtilisateur())
+                .nomExploitation(produit.getProducteur().getNomExploitation())
+                .nomProduit(produit.getNomProduit())
+                .quantiteStock(produit.getQuantiteStock())
+                .prix(produit.getPrix())
+                .typeProduit(produit.getTypeProduit())
+                .disponibilite(produit.isDisponibilite())
+                .build();
     }
 
     @Override
@@ -349,7 +484,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .longitude(longitude)
                 .build();
 
-        return producteurRepository.findByCompteValideTrue(Pageable.unpaged()).getContent().stream()
+        return producteurRepository.findByStatut(com.bioconversion.utilisateur.StatutUtilisateur.ACTIF, Pageable.unpaged()).getContent().stream()
                 .filter(p -> p.getLocalisation() != null)
                 .map(p -> {
                     double dist = p.getLocalisation().calculerDistance(centreRecherche);
@@ -382,14 +517,13 @@ public class MarketplaceServiceImpl implements MarketplaceService {
             return commande;
         }
 
-        if (commande.getStatut() == StatutCommande.ANNULE || commande.getStatut() == StatutCommande.REFUSE
-                || commande.getStatut() == StatutCommande.NON_CONFIRMEE) {
-            throw new BusinessException("Impossible de marquer comme payée une commande avec le statut "
-                    + commande.getStatut());
+        // Align with state machine: only allow transition to PAYE from CONFIRME
+        if (commande.getStatut() != StatutCommande.CONFIRME) {
+            throw new BusinessException("La transition vers le statut PAYE n'est autorisée que depuis le statut CONFIRME (statut actuel : "
+                    + commande.getStatut() + ")");
         }
 
         commande.setStatut(StatutCommande.PAYE);
         return commandeRepository.save(commande);
     }
 }
-

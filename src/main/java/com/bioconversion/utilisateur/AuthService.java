@@ -1,6 +1,7 @@
 package com.bioconversion.utilisateur;
 
 import com.bioconversion.common.exception.BusinessException;
+import com.bioconversion.common.util.PhoneUtils;
 import com.bioconversion.config.AppProperties;
 import com.bioconversion.geo.Localisation;
 import com.bioconversion.security.JwtTokenProvider;
@@ -10,6 +11,10 @@ import com.bioconversion.utilisateur.dto.EleveurRegisterRequest;
 import com.bioconversion.utilisateur.dto.ProducteurRegisterRequest;
 import com.bioconversion.utilisateur.dto.UtilisateurResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,29 +32,39 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final AppProperties appProperties;
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     public AuthResponse authenticate(AuthRequest request) {
-        Utilisateur user = utilisateurRepository.findByTelephone(request.getTelephone())
-                .orElseThrow(() -> new BusinessException("Numéro de téléphone ou mot de passe incorrect"));
+        // Normalize phone number for lookup
+        String normalizedPhone = PhoneUtils.normalizeToE164(request.getTelephone());
 
-        if (!passwordEncoder.matches(request.getMotDePasse(), user.getMotDePasse())) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            normalizedPhone,
+                            request.getMotDePasse()
+                    )
+            );
+
+            Utilisateur user = utilisateurRepository.findByTelephone(normalizedPhone)
+                    .orElseThrow(() -> new BusinessException("Utilisateur introuvable"));
+
+            String token = tokenProvider.generateToken(user.getTelephone(), user.getRole(), user.getId());
+            long expiration = appProperties.jwt().expirationMs();
+
+            return AuthResponse.of(token, expiration, UtilisateurResponse.from(user));
+        } catch (AuthenticationException e) {
             throw new BusinessException("Numéro de téléphone ou mot de passe incorrect");
         }
-
-        if (user.getStatut() == StatutUtilisateur.SUSPENDU) {
-            throw new BusinessException("Compte suspendu. Veuillez contacter l'administrateur.");
-        }
-
-        String token = tokenProvider.generateToken(user.getTelephone(), user.getRole(), user.getId());
-        long expiration = appProperties.jwt().expirationMs();
-
-        return AuthResponse.of(token, expiration, UtilisateurResponse.from(user));
     }
 
     @Transactional
     public UtilisateurResponse registerProducteur(ProducteurRegisterRequest request) {
-        if (utilisateurRepository.existsByTelephone(request.getTelephone())) {
+        // Normalize phone number
+        String normalizedPhone = PhoneUtils.normalizeToE164(request.getTelephone());
+
+        if (utilisateurRepository.existsByTelephone(normalizedPhone)) {
             throw new BusinessException("Un compte existe déjà avec ce numéro de téléphone");
         }
 
@@ -58,24 +73,23 @@ public class AuthService {
         Producteur p = new Producteur();
         p.setNom(request.getNom());
         p.setPrenom(request.getPrenom());
-        p.setTelephone(request.getTelephone());
+        p.setTelephone(normalizedPhone);
         p.setMotDePasse(hashedPwd);
         p.setNomExploitation(request.getNomExploitation());
         p.setCapaciteProduction(request.getCapaciteProduction() != null ? request.getCapaciteProduction() : 0.0);
-        p.setEstValide(false); // CDC §2.2.3 — Validation par l'Admin requise
+        p.setStatut(StatutUtilisateur.EN_ATTENTE_VALIDATION); // CDC §2.2.3 — Validation par l'Admin requise
 
         Localisation loc = new Localisation();
+        loc.setProvince(request.getProvince());
+        loc.setVille(request.getVille());
+
         if (request.getLatitude() != null && request.getLongitude() != null) {
             loc.setLatitude(request.getLatitude());
             loc.setLongitude(request.getLongitude());
-            loc.setProvince(request.getProvince());
-            loc.setVille(request.getVille());
         } else {
             // Localisation minimale par défaut si non spécifiée à la création
             loc.setLatitude(12.3714); // Ouagadougou par défaut
             loc.setLongitude(-1.5197);
-            loc.setProvince(request.getProvince());
-            loc.setVille(request.getVille());
         }
         p.setLocalisation(loc);
 
@@ -85,7 +99,10 @@ public class AuthService {
 
     @Transactional
     public UtilisateurResponse registerEleveur(EleveurRegisterRequest request) {
-        if (utilisateurRepository.existsByTelephone(request.getTelephone())) {
+        // Normalize phone number
+        String normalizedPhone = PhoneUtils.normalizeToE164(request.getTelephone());
+
+        if (utilisateurRepository.existsByTelephone(normalizedPhone)) {
             throw new BusinessException("Un compte existe déjà avec ce numéro de téléphone");
         }
 
@@ -94,17 +111,17 @@ public class AuthService {
         Eleveur e = new Eleveur();
         e.setNom(request.getNom());
         e.setPrenom(request.getPrenom());
-        e.setTelephone(request.getTelephone());
+        e.setTelephone(normalizedPhone);
         e.setMotDePasse(hashedPwd);
         e.setTypeElevage(request.getTypeElevage());
         e.setAdresse(request.getAdresse());
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
             Localisation loc = new Localisation();
-            loc.setLatitude(request.getLatitude());
-            loc.setLongitude(request.getLongitude());
             loc.setProvince(request.getProvince());
             loc.setVille(request.getVille());
+            loc.setLatitude(request.getLatitude());
+            loc.setLongitude(request.getLongitude());
             e.setLocalisation(loc);
         }
 

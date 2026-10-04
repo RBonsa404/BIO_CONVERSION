@@ -3,6 +3,7 @@ package com.bioconversion.marketplace;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,14 +19,14 @@ class CommandeCalculTest {
         // Given : Ligne avec 15.5 kg à 1200 FCFA/kg
         LigneCommande ligne = LigneCommande.builder()
                 .quantite(15.5)
-                .prixUnitaireFige(1200.0)
+                .prixUnitaireFige(BigDecimal.valueOf(1200.0))
                 .build();
 
         // When
-        double sousTotal = ligne.calculerSousTotal();
+        BigDecimal sousTotal = ligne.calculerSousTotal();
 
         // Then
-        assertEquals(18600.0, sousTotal, 0.001, "Le sous-total doit être 15.5 * 1200 = 18600 FCFA");
+        assertEquals(0, BigDecimal.valueOf(18600.0).compareTo(sousTotal), "Le sous-total doit être 15.5 * 1200 = 18600 FCFA");
     }
 
     @Test
@@ -34,12 +35,12 @@ class CommandeCalculTest {
         // Given : Commande avec deux lignes
         LigneCommande ligne1 = LigneCommande.builder()
                 .quantite(10.0)
-                .prixUnitaireFige(1500.0) // 15000
+                .prixUnitaireFige(BigDecimal.valueOf(1500.0)) // 15000
                 .build();
 
         LigneCommande ligne2 = LigneCommande.builder()
                 .quantite(2.5)
-                .prixUnitaireFige(2000.0) // 5000
+                .prixUnitaireFige(BigDecimal.valueOf(2000.0)) // 5000
                 .build();
 
         Commande commande = Commande.builder()
@@ -49,10 +50,10 @@ class CommandeCalculTest {
         commande.ajouterLigne(ligne2);
 
         // When
-        double total = commande.calculerMontantTotal();
+        BigDecimal total = commande.calculerMontantTotal();
 
         // Then
-        assertEquals(20000.0, total, 0.001, "Le montant total doit être de 20 000 FCFA");
+        assertEquals(0, BigDecimal.valueOf(20000.0).compareTo(total), "Le montant total doit être de 20 000 FCFA");
     }
 
     @Test
@@ -62,6 +63,6 @@ class CommandeCalculTest {
                 .lignes(new ArrayList<>())
                 .build();
 
-        assertEquals(0.0, commande.calculerMontantTotal(), 0.001);
+        assertEquals(BigDecimal.ZERO, commande.calculerMontantTotal());
     }
 }

@@ -20,7 +20,7 @@ public class ReseauProducteurServiceImpl implements ReseauProducteurService {
 
     @Override
     public Page<Producteur> listerProducteursValides(Pageable pageable) {
-        return producteurRepository.findByCompteValideTrue(pageable);
+        return producteurRepository.findByStatut(StatutUtilisateur.ACTIF, pageable);
     }
 
     @Override
@@ -29,11 +29,30 @@ public class ReseauProducteurServiceImpl implements ReseauProducteurService {
     }
 
     @Override
+    public Page<Producteur> listerProducteursEnAttente(Pageable pageable) {
+        return producteurRepository.findByStatut(StatutUtilisateur.EN_ATTENTE_VALIDATION, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Producteur trouverProducteur(Long producteurId) {
+        return producteurRepository.findById(producteurId)
+                .orElseThrow(() -> new ResourceNotFoundException("Producteur non trouvé avec l'id : " + producteurId));
+    }
+
+    @Override
     @Transactional
     public Producteur validerProducteur(Long producteurId, boolean approuve) {
         Producteur p = producteurRepository.findById(producteurId)
                 .orElseThrow(() -> new ResourceNotFoundException("Producteur non trouvé avec l'id : " + producteurId));
-        p.setEstValide(approuve);
+        
+        // Use Utilisateur.statut as single source of truth instead of Producteur.compteValide
+        if (approuve) {
+            p.setStatut(StatutUtilisateur.ACTIF);
+        } else {
+            p.setStatut(StatutUtilisateur.REFUSE);
+        }
+        
         return producteurRepository.save(p);
     }
 

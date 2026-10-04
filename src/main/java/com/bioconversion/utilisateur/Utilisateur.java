@@ -40,13 +40,12 @@ import java.time.OffsetDateTime;
  * <b>Méthodes du diagramme de classes :</b>
  * <ul>
  * <li>{@code sInscrire()} →
- * {@link com.bioconversion.utilisateur.AuthService#inscrire}</li>
+ * {@link com.bioconversion.utilisateur.AuthService#registerProducteur}</li>
  * <li>{@code seConnecter()} →
- * {@link com.bioconversion.utilisateur.AuthService#connecter}</li>
+ * {@link com.bioconversion.utilisateur.AuthService#authenticate}</li>
  * <li>{@code seDeconnecter()} → côté client (JWT stateless, pas de invalidation
  * serveur)</li>
- * <li>{@code modifierProfil()} →
- * {@link com.bioconversion.utilisateur.AuthService#modifierProfil}</li>
+ * <li>{@code modifierProfil()} → TODO: implémenter modification de profil</li>
  * <li>{@code recupererMotDePasse()} → TODO: implémenter envoi SMS OTP (CDC
  * §2.2.5)</li>
  * </ul>

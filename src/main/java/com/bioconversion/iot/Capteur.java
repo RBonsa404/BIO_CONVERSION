@@ -56,6 +56,10 @@ public class Capteur {
     @Column(name = "code_identifiant", nullable = false, unique = true, length = 100)
     private String codeIdentifiant;
 
+    public String getCode() {
+        return codeIdentifiant;
+    }
+
     @NotBlank(message = "Le type de capteur est obligatoire")
     @Size(max = 100)
     @Column(name = "type_capteur", nullable = false, length = 100)
@@ -85,6 +89,12 @@ public class Capteur {
 
     @Column(name = "date_mesure")
     private OffsetDateTime dateMesure;
+
+    @Column(name = "seuil_temperature_max")
+    private Double seuilTemperatureMax;
+
+    @Column(name = "seuil_humidite_max")
+    private Double seuilHumiditeMax;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

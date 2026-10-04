@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
@@ -55,8 +56,8 @@ public class Paiement {
      * TODO Module C : forcer montant = commande.calculerMontantTotal() — ne pas permettre saisie libre.
      */
     @Positive(message = "Le montant du paiement doit être strictement positif")
-    @Column(name = "montant", nullable = false)
-    private double montant;
+    @Column(name = "montant", nullable = false, precision = 19, scale = 4)
+    private BigDecimal montant;
 
     /**
      * Opérateur de paiement : "ORANGE_MONEY" ou "ESPECES".
@@ -66,8 +67,13 @@ public class Paiement {
     @Column(name = "operateur", nullable = false, length = 100)
     private String operateur;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
     /** Référence de transaction retournée par l'API Orange Money. */
-    @Column(name = "reference_transaction", length = 255)
+    @NotBlank
+    @Column(name = "reference_transaction", nullable = false, length = 255, unique = true)
     private String referenceTransaction;
 
     @Column(name = "date_paiement", nullable = false)
@@ -83,6 +89,30 @@ public class Paiement {
      */
     @OneToOne(mappedBy = "paiement", cascade = CascadeType.ALL, orphanRemoval = true)
     private Facture facture;
+        /**
+     * C-MUST-1 : initie la transaction auprès de l'opérateur avant validation de la commande.
+     * TODO Module C : intégration API Orange Money — SIMULÉE pour l'instant.
+     */
+    public void effectuerPaiement() {
+        this.datePaiement = OffsetDateTime.now();
+        this.statutPaiement = StatutPaiement.EN_ATTENTE;
+    }
+
+    /**
+     * C-MUST-2/C-MUST-3 : appelée par le webhook de confirmation de l'opérateur.
+     */
+    public void confirmerPaiement(String referenceTransactionOperateur) {
+        this.referenceTransaction = referenceTransactionOperateur;
+        this.datePaiement = OffsetDateTime.now();
+        this.statutPaiement = StatutPaiement.CONFIRME;
+    }
+
+    /**
+     * Cas limite CDC 2.3.2 : échec ou expiration de la transaction Orange Money.
+     */
+    public void annulerPaiement() {
+        this.statutPaiement = StatutPaiement.ECHOUE;
+    }
 
     public Long getId() {
         return idPaiement;

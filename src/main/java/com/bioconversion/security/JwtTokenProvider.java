@@ -66,6 +66,10 @@ public class JwtTokenProvider {
         return parseClaims(token).getSubject();
     }
 
+    public Long getUserIdFromToken(String token) {
+        return parseClaims(token).get("userId", Long.class);
+    }
+
     /**
      * Valide un token JWT.
      *

@@ -10,6 +10,6 @@ class BioConversionApplicationTests {
 
     @Test
     void contextLoads() {
-        // Vérifie le chargement propre du contexte Spring Boot avec le profil dev H2
+        // Vérifie le chargement propre du contexte Spring Boot avec le profil test H2
     }
 }

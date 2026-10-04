@@ -15,7 +15,8 @@ public enum StatutUtilisateur {
 
     ACTIF,
     SUSPENDU,
-    EN_ATTENTE_VALIDATION;
+    EN_ATTENTE_VALIDATION,
+    REFUSE;
 
     /** @return {@code true} si le statut autorise la connexion */
     public boolean isActif() {
