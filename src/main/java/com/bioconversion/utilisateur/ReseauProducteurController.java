@@ -11,8 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Squelette de contrôleur REST pour le Module D — Réseau des Producteurs &
- * Administration.
+ * Contrôleur REST du Module D — Réseau des Producteurs.
+ *
+ * <p>
+ * Toutes les réponses passent par {@link ProducteurResponse} : l'entité
+ * {@link Producteur} porte le hash du mot de passe et des associations
+ * paresseuses, elle ne doit jamais être sérialisée telle quelle.
+ * </p>
  */
 @RestController
 @RequestMapping("/api/v1/producteurs")
@@ -22,7 +27,7 @@ public class ReseauProducteurController {
     private final ReseauProducteurService reseauProducteurService;
 
     @GetMapping("/en-attente")
-    @PreAuthorize("hasRole('ADMINISTRATEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'SUPER_ADMINISTRATEUR')")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<ProducteurResponse>>> listerProducteursEnAttente(Pageable pageable) {
         Page<ProducteurResponse> producteurs = reseauProducteurService.listerProducteursEnAttente(pageable)
@@ -37,21 +42,25 @@ public class ReseauProducteurController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<Producteur>>> listerProducteurs(Pageable pageable) {
-        Page<Producteur> producteurs = reseauProducteurService.listerProducteursValides(pageable);
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Page<ProducteurResponse>>> listerProducteurs(Pageable pageable) {
+        Page<ProducteurResponse> producteurs = reseauProducteurService.listerProducteursValides(pageable)
+                .map(ProducteurResponse::from);
         return ResponseEntity.ok(ApiResponse.success(producteurs));
     }
 
     @GetMapping("/province/{province}")
-    public ResponseEntity<ApiResponse<Page<Producteur>>> listerParProvince(
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Page<ProducteurResponse>>> listerParProvince(
             @PathVariable String province,
             Pageable pageable) {
-        Page<Producteur> producteurs = reseauProducteurService.listerProducteursParProvince(province, pageable);
+        Page<ProducteurResponse> producteurs = reseauProducteurService.listerProducteursParProvince(province, pageable)
+                .map(ProducteurResponse::from);
         return ResponseEntity.ok(ApiResponse.success(producteurs));
     }
 
     @PutMapping("/{id}/valider")
-    @PreAuthorize("hasRole('ADMINISTRATEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'SUPER_ADMINISTRATEUR')")
     @Transactional
     public ResponseEntity<ApiResponse<ProducteurResponse>> validerProducteur(
             @PathVariable Long id,

@@ -14,7 +14,8 @@ import com.bioconversion.utilisateur.Utilisateur;
 import com.bioconversion.utilisateur.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +24,14 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Comptes et catalogue de démonstration, créés au démarrage s'ils n'existent pas.
+ * Actif quand {@code app.demo.enabled=true} (par défaut en profils dev et local,
+ * variable DEMO_DATA en production).
+ */
 @Component
-@Profile("dev")
+@Order(1)
+@ConditionalOnProperty(name = "app.demo.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class DevTestDataInitializer implements CommandLineRunner {
 
