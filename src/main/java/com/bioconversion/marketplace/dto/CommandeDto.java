@@ -2,6 +2,8 @@ package com.bioconversion.marketplace.dto;
 
 import com.bioconversion.marketplace.Commande;
 import com.bioconversion.marketplace.StatutCommande;
+import com.bioconversion.paiement.Paiement;
+import com.bioconversion.paiement.StatutPaiement;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -34,6 +36,14 @@ public class CommandeDto {
     private BigDecimal montantTotal;
     private List<LigneCommandeDto> lignes;
 
+    // Coordonnées des deux parties, pour organiser la livraison
+    private String telephoneEleveur;
+    private String telephoneProducteur;
+
+    // État du règlement (null tant qu'aucun paiement n'a été initié)
+    private StatutPaiement statutPaiement;
+    private String referenceFacture;
+
     public static CommandeDto fromEntity(Commande commande) {
         if (commande == null) {
             return null;
@@ -53,6 +63,8 @@ public class CommandeDto {
                     .collect(Collectors.toList());
         }
 
+        Paiement paiement = commande.getPaiement();
+
         return CommandeDto.builder()
                 .idCommande(commande.getIdCommande())
                 .numeroCommande(commande.getNumeroCommande())
@@ -64,6 +76,12 @@ public class CommandeDto {
                 .statut(commande.getStatut())
                 .montantTotal(commande.calculerMontantTotal())
                 .lignes(lignesDto)
+                .telephoneEleveur(commande.getEleveur() != null ? commande.getEleveur().getTelephone() : null)
+                .telephoneProducteur(commande.getProducteur() != null ? commande.getProducteur().getTelephone() : null)
+                .statutPaiement(paiement != null ? paiement.getStatutPaiement() : null)
+                .referenceFacture(paiement != null && paiement.getFacture() != null
+                        ? paiement.getFacture().getReference()
+                        : null)
                 .build();
     }
 }

@@ -22,4 +22,8 @@ public interface PaiementRepository extends JpaRepository<Paiement, Long> {
             "where p.commande.producteur.idUtilisateur = :producteurId " +
             "and p.statutPaiement = com.bioconversion.paiement.StatutPaiement.CONFIRME")
     BigDecimal sumConfirmedPaymentsByProducteurId(@Param("producteurId") Long producteurId);
+
+    @Query("select coalesce(sum(p.montant), 0) from Paiement p " +
+            "where p.statutPaiement = com.bioconversion.paiement.StatutPaiement.CONFIRME")
+    BigDecimal sumConfirmedPayments();
 }

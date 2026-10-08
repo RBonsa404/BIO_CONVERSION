@@ -1,30 +1,64 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ApiResponse } from '../models/auth.model';
+import { ApiResponse, BackendUtilisateurInfo, StatutUtilisateur } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
-import { PageResponse, ProducteurProfile } from './marketplace.service';
+import { PageResponse, StatutCommande } from './marketplace.service';
+
+export interface StatistiquesPlateforme {
+  producteurs: number;
+  eleveurs: number;
+  comptesEnAttente: number;
+  produitsDisponibles: number;
+  commandes: number;
+  commandesParStatut: Record<StatutCommande, number>;
+  volumePaiementsConfirmes: number;
+  tauxCommission: number;
+  commissionPlateforme: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AdminService {
-  private apiUrl = environment.apiUrl;
+  private apiUrl = `${environment.apiUrl}/admin`;
 
   constructor(private http: HttpClient) {}
 
-  listerProducteursEnAttente(page = 0, size = 20): Observable<ApiResponse<PageResponse<ProducteurProfile>>> {
-    return this.http.get<ApiResponse<PageResponse<ProducteurProfile>>>(
-      `${this.apiUrl}/producteurs/en-attente`,
-      { params: { page, size } }
+  listerUtilisateurs(
+    statut?: StatutUtilisateur,
+    page = 0,
+    size = 100
+  ): Observable<ApiResponse<PageResponse<BackendUtilisateurInfo>>> {
+    return this.http.get<ApiResponse<PageResponse<BackendUtilisateurInfo>>>(
+      `${this.apiUrl}/utilisateurs`,
+      { params: statut ? { statut, page, size } : { page, size } }
     );
   }
 
-  validerProducteur(producteurId: number, approuve: boolean): Observable<ApiResponse<ProducteurProfile>> {
-    return this.http.put<ApiResponse<ProducteurProfile>>(
-      `${this.apiUrl}/producteurs/${producteurId}/valider`,
+  validerInscription(utilisateurId: number, approuve: boolean): Observable<ApiResponse<BackendUtilisateurInfo>> {
+    return this.http.put<ApiResponse<BackendUtilisateurInfo>>(
+      `${this.apiUrl}/utilisateurs/${utilisateurId}/valider`,
       null,
       { params: { approuve } }
     );
+  }
+
+  suspendre(utilisateurId: number): Observable<ApiResponse<BackendUtilisateurInfo>> {
+    return this.http.put<ApiResponse<BackendUtilisateurInfo>>(
+      `${this.apiUrl}/utilisateurs/${utilisateurId}/suspendre`,
+      null
+    );
+  }
+
+  reactiver(utilisateurId: number): Observable<ApiResponse<BackendUtilisateurInfo>> {
+    return this.http.put<ApiResponse<BackendUtilisateurInfo>>(
+      `${this.apiUrl}/utilisateurs/${utilisateurId}/reactiver`,
+      null
+    );
+  }
+
+  statistiques(): Observable<ApiResponse<StatistiquesPlateforme>> {
+    return this.http.get<ApiResponse<StatistiquesPlateforme>>(`${this.apiUrl}/statistiques`);
   }
 }

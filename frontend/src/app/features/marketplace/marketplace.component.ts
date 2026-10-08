@@ -1,8 +1,15 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 import { MarketplaceService, ProducteurLocalise, Produit } from '../../core/services/marketplace.service';
+import { messageErreur } from '../../core/utils/http-error';
+import { libelleTypeProduit } from '../../core/utils/statuts';
+import { obtenirPosition } from '../../core/utils/validators';
+
+/* Centre de Ouagadougou : point de départ tant que la position de l'utilisateur est inconnue */
+const OUAGADOUGOU = { latitude: 12.3714, longitude: -1.5197 };
 
 @Component({
   selector: 'app-marketplace',
@@ -10,42 +17,20 @@ import { MarketplaceService, ProducteurLocalise, Produit } from '../../core/serv
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <div class="min-h-screen bg-cream">
-      <nav class="sticky top-0 z-50 border-b border-line bg-white px-5 py-3 md:px-8">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-6">
-          <a routerLink="/marketplace" class="flex shrink-0 items-center gap-3 font-serif text-2xl font-bold text-wine">
-            <img src="/logo.png" alt="" class="h-14 w-14 object-contain">
-            BioConversion
-          </a>
-          <div class="hidden items-center gap-12 text-text md:flex">
-            <a routerLink="/marketplace" routerLinkActive="border-b-2 border-green text-green"
-              [routerLinkActiveOptions]="{ exact: true }" class="px-2 py-4 font-semibold hover:text-green">Rechercher</a>
-            <a routerLink="/mes-commandes" routerLinkActive="border-b-2 border-green text-green"
-              [routerLinkActiveOptions]="{ exact: true }" class="px-2 py-4 font-semibold hover:text-green">Mes commandes</a>
-            <a routerLink="/historique" routerLinkActive="border-b-2 border-green text-green"
-              [routerLinkActiveOptions]="{ exact: true }" class="px-2 py-4 font-semibold hover:text-green">Historique</a>
-          </div>
-          <span class="grid h-12 w-12 place-items-center rounded-full bg-green-soft text-green" aria-hidden="true">
-            <svg viewBox="0 0 24 24" class="h-7 w-7" fill="currentColor">
-              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z" />
-            </svg>
-          </span>
-        </div>
-      </nav>
-
-      <section class="px-5 pt-3 md:px-8">
-        <p class="mb-3 text-center font-script text-xl italic text-green md:text-2xl">❧ &nbsp; Trouvez le producteur le plus proche de chez vous &nbsp; ❧</p>
+      <section class="px-5 pt-6 md:px-8">
+        <p class="mb-4 text-center font-script text-xl italic text-green md:text-2xl">❧ &nbsp; Trouvez le producteur le plus proche de chez vous &nbsp; ❧</p>
         <div class="mx-auto max-w-7xl">
           <form (ngSubmit)="applySearch()" class="flex flex-col gap-3 md:flex-row">
             <label class="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-line bg-white px-5 py-3">
               <span class="text-2xl text-green" aria-hidden="true">⌕</span>
-              <input name="searchTerm" [(ngModel)]="searchInput" type="search"
-                     placeholder="Rechercher un producteur, un produit, une région..."
+              <span class="sr-only">Rechercher</span>
+              <input name="searchTerm" [(ngModel)]="searchInput" (ngModelChange)="searchTerm.set($event)" type="search"
+                     placeholder="Rechercher un producteur ou un produit..."
                      class="w-full border-0 bg-transparent text-text outline-none">
             </label>
             <label class="flex items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-text">
-              <span class="text-green" aria-hidden="true">⌖</span>
-              <span class="whitespace-nowrap">Trier :</span>
-              <select name="sort" [(ngModel)]="sortBy" class="min-w-32 bg-transparent font-medium outline-none">
+              <span class="whitespace-nowrap">Trier par :</span>
+              <select name="sort" [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)" class="min-w-32 bg-transparent font-medium outline-none">
                 <option value="distance">distance</option>
                 <option value="prix">prix</option>
                 <option value="stock">stock</option>
@@ -53,72 +38,90 @@ import { MarketplaceService, ProducteurLocalise, Produit } from '../../core/serv
             </label>
           </form>
           <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-text">
-            <label for="rayon" class="flex items-center gap-2 font-medium">
-              <span class="grid h-9 w-9 place-items-center rounded-full bg-green-soft text-green" aria-hidden="true">⌖</span>
-              Rayon de recherche
-            </label>
-            <input id="rayon" name="rayon" type="range" min="1" max="50" step="1"
-                   [(ngModel)]="rayonKm" (change)="chargerProducteurs()"
+            <label for="rayon" class="font-medium">Rayon de recherche</label>
+            <input id="rayon" name="rayon" type="range" min="5" max="150" step="5"
+                   [ngModel]="rayonKm()" (ngModelChange)="rayonKm.set($event)" (change)="chargerProducteurs()"
                    class="min-w-40 flex-1 accent-green">
-            <span class="min-w-16 font-semibold">{{ rayonKm }} km</span>
+            <span class="min-w-16 font-semibold">{{ rayonKm() }} km</span>
+            <button type="button" (click)="utiliserMaPosition()" [disabled]="isLocating()"
+                    class="rounded-lg border border-green px-3 py-2 font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+              {{ isLocating() ? 'Localisation...' : 'Autour de ma position' }}
+            </button>
           </div>
+          @if (positionMessage()) {
+            <p class="mt-2 text-sm text-text" role="status">{{ positionMessage() }}</p>
+          }
         </div>
       </section>
 
       <main class="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-5 py-5 md:px-8 lg:grid-cols-[.85fr_1.15fr]">
         <section class="rounded-2xl border border-line bg-white p-4 shadow-sm">
           <h1 class="font-serif text-xl font-semibold text-green">Carte des producteurs</h1>
-          <p class="mb-3 text-sm text-text">Producteurs localisés dans un rayon de {{ rayonKm }} km</p>
-          <div class="producer-map" role="group" aria-label="Aperçu des emplacements des producteurs autour de Ouagadougou">
-            <span class="map-city">Ouagadougou</span>
+          <p class="mb-3 text-sm text-text">
+            {{ producteurs().length }} producteur(s) dans un rayon de {{ rayonKm() }} km autour de {{ centreLabel() }}
+          </p>
+          <div class="producer-map" role="group" aria-label="Emplacements des producteurs autour de la zone de recherche">
+            <span class="map-city">{{ centreLabel() }}</span>
             <span class="map-radius" aria-hidden="true"></span>
-            <span class="map-home" title="Ouagadougou" aria-label="Votre zone de recherche"></span>
-            <button *ngFor="let producteur of producteurs"
-                    type="button" class="map-marker"
-                    [ngStyle]="markerStyle(producteur)"
-                    [attr.aria-label]="'Producteur ' + producteur.nomExploitation"
-                    [title]="producteur.nomExploitation + ' · ' + (producteur.distanceKm | number:'1.0-1') + ' km'"
-                    [routerLink]="['/producteur', producteur.producteurId]">●</button>
-            <div *ngIf="!isLoadingMap && !mapError && producteurs.length === 0" class="map-empty">
-              Aucun producteur trouvé dans cette zone.
-            </div>
-            <div *ngIf="isLoadingMap" class="map-empty" role="status">Recherche des producteurs...</div>
-            <div *ngIf="mapError" class="map-empty text-red-700" role="alert">
-              {{ mapError }}
-              <button type="button" (click)="chargerProducteurs()" class="ml-2 underline">Réessayer</button>
-            </div>
+            <span class="map-home" [title]="centreLabel()" aria-label="Centre de la recherche"></span>
+            @for (producteur of producteurs(); track producteur.producteurId) {
+              <a class="map-marker"
+                 [ngStyle]="markerStyle(producteur)"
+                 [attr.aria-label]="'Producteur ' + producteur.nomExploitation"
+                 [title]="producteur.nomExploitation + ' · ' + (producteur.distanceKm | number:'1.0-1') + ' km'"
+                 [routerLink]="['/producteur', producteur.producteurId]">●</a>
+            }
+            @if (!isLoadingMap() && !mapError() && producteurs().length === 0) {
+              <div class="map-empty">Aucun producteur dans ce rayon. Élargissez la recherche.</div>
+            }
+            @if (isLoadingMap()) {
+              <div class="map-empty" role="status">Recherche des producteurs...</div>
+            }
+            @if (mapError()) {
+              <div class="map-empty text-red-700" role="alert">
+                {{ mapError() }}
+                <button type="button" (click)="chargerProducteurs()" class="ml-2 underline">Réessayer</button>
+              </div>
+            }
           </div>
-          <p class="mt-3 text-xs text-text">Les repères correspondent aux coordonnées des producteurs retournées par le service.</p>
+          <p class="mt-3 text-xs text-text">Vue schématique : les repères sont placés d’après les coordonnées GPS des exploitations.</p>
         </section>
 
         <section aria-label="Produits disponibles" class="space-y-3">
-          <div *ngIf="isLoading" role="status" class="rounded-xl bg-white p-6 text-center text-text">Chargement des produits...</div>
-          <div *ngIf="errorMessage" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-            {{ errorMessage }}
-            <button type="button" (click)="loadProduits()" class="ml-3 font-semibold underline">Réessayer</button>
-          </div>
-          <p *ngIf="!isLoading && !errorMessage && filteredProducts.length === 0" class="rounded-xl bg-white p-8 text-center text-text">
-            Aucun produit ne correspond à votre recherche.
-          </p>
-          <article *ngFor="let produit of filteredProducts"
-                   class="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white p-3 shadow-sm sm:flex-nowrap">
-            <img src="/larvae-hero.png" alt="" class="h-28 w-36 shrink-0 rounded-lg object-cover">
-            <div class="min-w-0 flex-1">
-              <h2 class="font-serif text-xl font-semibold text-wine">{{ produit.nomExploitation }}</h2>
-              <p class="mt-1 text-sm text-text">{{ produit.nomProduit }}</p>
-              <p class="mt-2 text-sm text-text">
-                <span class="text-green">⌖</span> {{ producerDistance(produit.producteurId) }}
-                <span class="mx-2 text-line">·</span>
-                <span class="font-medium">Stock disponible :</span>
-                <span class="text-green">{{ produit.quantiteStock }} kg</span>
-              </p>
-              <p class="mt-1 font-serif text-2xl font-bold text-wine">{{ produit.prix | number:'1.0-2' }} <small class="text-base">FCFA/kg</small></p>
+          @if (isLoading()) {
+            <div role="status" class="rounded-xl bg-white p-6 text-center text-text">Chargement des produits...</div>
+          }
+          @if (errorMessage()) {
+            <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+              {{ errorMessage() }}
+              <button type="button" (click)="loadProduits()" class="ml-3 font-semibold underline">Réessayer</button>
             </div>
-            <a [routerLink]="['/producteur', produit.producteurId]"
-               class="flex min-w-28 items-center justify-center gap-2 rounded-lg bg-wine px-4 py-3 font-semibold text-white hover:bg-wine-dark">
-              Voir <span aria-hidden="true">→</span>
-            </a>
-          </article>
+          }
+          @if (!isLoading() && !errorMessage() && filteredProducts().length === 0) {
+            <p class="rounded-xl bg-white p-8 text-center text-text">Aucun produit ne correspond à votre recherche.</p>
+          }
+          @for (produit of filteredProducts(); track produit.idProduit) {
+            <article class="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white p-3 shadow-sm sm:flex-nowrap">
+              <img src="/larvae-hero.webp" alt="" class="h-28 w-36 shrink-0 rounded-lg object-cover">
+              <div class="min-w-0 flex-1">
+                <h2 class="font-serif text-xl font-semibold text-wine">{{ produit.nomExploitation }}</h2>
+                <p class="mt-1 text-sm text-text">{{ produit.nomProduit }} · {{ libelleType(produit.typeProduit) }}</p>
+                <p class="mt-2 text-sm text-text">
+                  {{ producerDistance(produit.producteurId) }}
+                  <span class="mx-2 text-line">·</span>
+                  <span class="font-medium">Stock :</span>
+                  <span [ngClass]="produit.quantiteStock > 0 ? 'text-green' : 'text-red-700'">
+                    {{ produit.quantiteStock > 0 ? produit.quantiteStock + ' kg' : 'épuisé' }}
+                  </span>
+                </p>
+                <p class="mt-1 font-serif text-2xl font-bold text-wine">{{ produit.prix | number:'1.0-0' }} <small class="text-base">FCFA/kg</small></p>
+              </div>
+              <a [routerLink]="['/producteur', produit.producteurId]"
+                 class="flex min-w-28 items-center justify-center gap-2 rounded-lg bg-wine px-4 py-3 font-semibold text-white hover:bg-wine-dark">
+                Voir <span aria-hidden="true">→</span>
+              </a>
+            </article>
+          }
         </section>
       </main>
     </div>
@@ -139,111 +142,135 @@ import { MarketplaceService, ProducteurLocalise, Produit } from '../../core/serv
         repeating-linear-gradient(0deg, transparent 0 62px, #e1e7d9 63px 64px),
         repeating-linear-gradient(90deg, transparent 0 74px, #e1e7d9 75px 76px);
     }
-    .map-city { position: absolute; left: 43%; top: 53%; z-index: 2; padding: 4px 7px; border-radius: 4px; background: #f1f3e9dd; color: #3f4a57; font-weight: 700; }
-    .map-radius { position: absolute; left: 50%; top: 50%; width: 58%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid #4e7d3f88; border-radius: 50%; background: #e8f0df35; }
+    .map-city { position: absolute; left: 50%; top: 54%; z-index: 2; transform: translateX(-50%); padding: 4px 7px; border-radius: 4px; background: #f1f3e9dd; color: #3f4a57; font-weight: 700; white-space: nowrap; }
+    .map-radius { position: absolute; left: 50%; top: 50%; width: 86%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid #4e7d3f88; border-radius: 50%; background: #e8f0df35; }
     .map-home { position: absolute; left: 50%; top: 50%; z-index: 3; width: 15px; height: 15px; transform: translate(-50%, -50%); border: 3px solid white; border-radius: 50%; background: #3b82c4; box-shadow: 0 1px 4px #3f4a5780; }
-    .map-marker { position: absolute; z-index: 4; width: 27px; height: 31px; transform: translate(-50%, -100%); border: 0; border-radius: 50% 50% 50% 0; background: #64102f; color: white; font-size: 11px; line-height: 27px; text-align: center; cursor: pointer; box-shadow: 0 2px 4px #3f08204a; }
+    .map-marker { position: absolute; z-index: 4; width: 27px; height: 31px; transform: translate(-50%, -100%); border: 0; border-radius: 50% 50% 50% 0; background: #64102f; color: white; font-size: 11px; line-height: 27px; text-align: center; text-decoration: none; cursor: pointer; box-shadow: 0 2px 4px #3f08204a; }
     .map-marker:hover, .map-marker:focus-visible { z-index: 5; background: #3f0820; outline: 2px solid white; }
     .map-empty { position: absolute; inset: auto 16px 16px; z-index: 6; border-radius: 8px; background: white; padding: 10px 12px; color: #3f4a57; font-size: 13px; box-shadow: 0 1px 4px #3f08201a; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
     @media (max-width: 1023px) { .producer-map { min-height: 360px; } }
   `
 })
 export class MarketplaceComponent implements OnInit {
-  produits: Produit[] = [];
-  producteurs: ProducteurLocalise[] = [];
+  readonly produits = signal<Produit[]>([]);
+  readonly producteurs = signal<ProducteurLocalise[]>([]);
+  readonly searchTerm = signal('');
+  readonly rayonKm = signal(50);
+  readonly sortBy = signal<'distance' | 'prix' | 'stock'>('distance');
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
+  readonly isLoadingMap = signal(false);
+  readonly mapError = signal('');
+  readonly isLocating = signal(false);
+  readonly positionMessage = signal('');
+  readonly centreLabel = signal('Ouagadougou');
+
   searchInput = '';
-  searchTerm = '';
-  rayonKm = 10;
-  sortBy: 'distance' | 'prix' | 'stock' = 'distance';
-  isLoading = false;
-  errorMessage = '';
-  isLoadingMap = false;
-  mapError = '';
-  private readonly latitude = 12.3714;
-  private readonly longitude = -1.5197;
+  private centre = { ...OUAGADOUGOU };
+
+  readonly libelleType = libelleTypeProduit;
+
+  readonly filteredProducts = computed(() => {
+    const term = this.searchTerm().trim().toLocaleLowerCase();
+    const sortBy = this.sortBy();
+    const distances = new Map(this.producteurs().map(p => [p.producteurId, p.distanceKm]));
+    const distance = (id: number) => distances.get(id) ?? Number.POSITIVE_INFINITY;
+
+    return this.produits()
+      .filter(produit =>
+        !term || `${produit.nomProduit} ${produit.nomExploitation} ${libelleTypeProduit(produit.typeProduit)}`
+          .toLocaleLowerCase()
+          .includes(term))
+      .sort((left, right) => {
+        if (sortBy === 'prix') return left.prix - right.prix;
+        if (sortBy === 'stock') return right.quantiteStock - left.quantiteStock;
+        return distance(left.producteurId) - distance(right.producteurId);
+      });
+  });
 
   constructor(
     private marketplaceService: MarketplaceService,
-    private changeDetectorRef: ChangeDetectorRef
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    // Position enregistrée sur le profil (éleveur ou producteur), si elle existe
+    const user = this.authService.getCurrentUser();
+    if (user?.latitude != null && user?.longitude != null) {
+      this.centre = { latitude: user.latitude, longitude: user.longitude };
+      this.centreLabel.set(user.ville || 'votre position');
+    }
     this.loadProduits();
     this.chargerProducteurs();
   }
 
-  get filteredProducts(): Produit[] {
-    const term = this.searchTerm.trim().toLocaleLowerCase();
-    const matches = this.produits.filter(produit =>
-      !term || `${produit.nomProduit} ${produit.nomExploitation} ${produit.typeProduit}`
-        .toLocaleLowerCase()
-        .includes(term)
-    );
-    return matches.sort((left, right) => {
-      if (this.sortBy === 'prix') return left.prix - right.prix;
-      if (this.sortBy === 'stock') return right.quantiteStock - left.quantiteStock;
-      return this.distanceFor(left.producteurId) - this.distanceFor(right.producteurId);
-    });
+  applySearch(): void {
+    this.searchTerm.set(this.searchInput);
   }
 
-  applySearch(): void {
-    this.searchTerm = this.searchInput;
+  utiliserMaPosition(): void {
+    this.isLocating.set(true);
+    this.positionMessage.set('');
+    obtenirPosition()
+      .then(position => {
+        this.centre = position;
+        this.centreLabel.set('votre position');
+        this.chargerProducteurs();
+      })
+      .catch((message: string) => this.positionMessage.set(message))
+      .finally(() => this.isLocating.set(false));
   }
 
   loadProduits(): void {
-    this.isLoading = true;
-    this.errorMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
     this.marketplaceService.listerProduits().subscribe({
       next: response => {
-        this.produits = response.data.content;
-        this.isLoading = false;
-        this.changeDetectorRef.markForCheck();
+        this.produits.set(response.data.content);
+        this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage = 'Impossible de charger les produits. Vérifiez votre connexion et réessayez.';
-        this.isLoading = false;
-        this.changeDetectorRef.markForCheck();
+      error: error => {
+        this.errorMessage.set(messageErreur(error, 'Impossible de charger les produits. Vérifiez votre connexion et réessayez.'));
+        this.isLoading.set(false);
       }
     });
   }
 
   chargerProducteurs(): void {
-    this.isLoadingMap = true;
-    this.mapError = '';
+    this.isLoadingMap.set(true);
+    this.mapError.set('');
     this.marketplaceService.rechercherProducteursParRayon(
-      this.latitude,
-      this.longitude,
-      this.rayonKm
+      this.centre.latitude,
+      this.centre.longitude,
+      this.rayonKm()
     ).subscribe({
       next: response => {
-        this.producteurs = response.data;
-        this.isLoadingMap = false;
-        this.changeDetectorRef.markForCheck();
+        this.producteurs.set(response.data);
+        this.isLoadingMap.set(false);
       },
-      error: () => {
-        this.mapError = 'Impossible de charger les producteurs autour de cette zone.';
-        this.isLoadingMap = false;
-        this.changeDetectorRef.markForCheck();
+      error: error => {
+        this.mapError.set(messageErreur(error, 'Impossible de charger les producteurs autour de cette zone.'));
+        this.isLoadingMap.set(false);
       }
     });
   }
 
+  /** Place un repère : le bord du cercle correspond au rayon de recherche. */
   markerStyle(producteur: ProducteurLocalise): Record<string, string> {
-    const latitudeDeltaKm = (producteur.latitude - this.latitude) * 111;
-    const longitudeDeltaKm = (producteur.longitude - this.longitude) * 111 * Math.cos(this.latitude * Math.PI / 180);
-    const scale = Math.max(this.rayonKm, 1);
-    const left = Math.max(7, Math.min(93, 50 + longitudeDeltaKm / scale * 43));
-    const top = Math.max(8, Math.min(92, 50 - latitudeDeltaKm / scale * 43));
+    const latitudeDeltaKm = (producteur.latitude - this.centre.latitude) * 111;
+    const longitudeDeltaKm = (producteur.longitude - this.centre.longitude) * 111
+      * Math.cos(this.centre.latitude * Math.PI / 180);
+    const scale = Math.max(this.rayonKm(), 1);
+    const left = Math.max(5, Math.min(95, 50 + longitudeDeltaKm / scale * 43));
+    const top = Math.max(8, Math.min(95, 50 - latitudeDeltaKm / scale * 43));
     return { left: `${left}%`, top: `${top}%` };
   }
 
   producerDistance(producteurId: number): string {
-    const producer = this.producteurs.find(item => item.producteurId === producteurId);
-    return producer ? `${producer.distanceKm.toFixed(1)} km` : 'Distance indisponible';
+    const producer = this.producteurs().find(item => item.producteurId === producteurId);
+    return producer
+      ? `à ${producer.distanceKm.toFixed(1)} km`
+      : `hors du rayon de ${this.rayonKm()} km`;
   }
-
-  private distanceFor(producteurId: number): number {
-    return this.producteurs.find(item => item.producteurId === producteurId)?.distanceKm ?? Number.POSITIVE_INFINITY;
-  }
-
 }

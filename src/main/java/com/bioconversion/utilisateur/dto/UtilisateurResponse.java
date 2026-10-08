@@ -1,5 +1,6 @@
 package com.bioconversion.utilisateur.dto;
 
+import com.bioconversion.geo.Localisation;
 import com.bioconversion.utilisateur.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,8 +26,10 @@ public class UtilisateurResponse {
     private String matricule;        // Administrateur
     private Double latitude;
     private Double longitude;
-    private String nomExploitation;
+    private String nomExploitation;  // Producteur
     private Double capaciteProduction;
+    private String typeElevage;      // Éleveur
+    private String adresse;
     private String ville;
     private String province;
 
@@ -43,21 +46,25 @@ public class UtilisateurResponse {
         if (utilisateur instanceof Producteur p) {
             builder.nomExploitation(p.getNomExploitation())
                     .capaciteProduction(p.getCapaciteProduction());
-            if (p.getLocalisation() != null) {
-                builder.latitude(p.getLocalisation().getLatitude());
-                builder.longitude(p.getLocalisation().getLongitude());
-                builder.ville(p.getLocalisation().getVille());
-                builder.province(p.getLocalisation().getProvince());
-            }
-        } else if (utilisateur instanceof Eleveur e && e.getLocalisation() != null) {
-            builder.latitude(e.getLocalisation().getLatitude());
-            builder.longitude(e.getLocalisation().getLongitude());
-            builder.ville(e.getLocalisation().getVille());
-            builder.province(e.getLocalisation().getProvince());
+            localiser(builder, p.getLocalisation());
+        } else if (utilisateur instanceof Eleveur e) {
+            builder.typeElevage(e.getTypeElevage())
+                    .adresse(e.getAdresse());
+            localiser(builder, e.getLocalisation());
         } else if (utilisateur instanceof Administrateur a) {
             builder.matricule(a.getMatricule());
         }
 
         return builder.build();
+    }
+
+    private static void localiser(UtilisateurResponseBuilder builder, Localisation localisation) {
+        if (localisation == null) {
+            return;
+        }
+        builder.latitude(localisation.getLatitude())
+                .longitude(localisation.getLongitude())
+                .ville(localisation.getVille())
+                .province(localisation.getProvince());
     }
 }

@@ -1,6 +1,7 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 type Profile = 'producteur' | 'eleveur';
 
@@ -13,7 +14,7 @@ type Profile = 'producteur' | 'eleveur';
       <header class="topbar">
         <div class="wrap topbar-in">
           <a routerLink="/" class="brand" aria-label="BioConversion, accueil">
-            <span class="brand-mark"><img src="/logo.png" alt=""></span>
+            <span class="brand-mark"><img src="/logo.webp" alt=""></span>
             <span class="brand-text">
               <span class="brand-name">BioConversion</span>
               <span class="brand-sub">
@@ -21,7 +22,11 @@ type Profile = 'producteur' | 'eleveur';
               </span>
             </span>
           </a>
-          <a routerLink="/connexion" class="btn-login">Se connecter</a>
+          @if (connecte()) {
+            <a [routerLink]="espace()" class="btn-login">Mon espace</a>
+          } @else {
+            <a routerLink="/connexion" class="btn-login">Se connecter</a>
+          }
         </div>
       </header>
 
@@ -51,20 +56,24 @@ type Profile = 'producteur' | 'eleveur';
               <span class="card-hint">Je produis et je vends mes larves</span>
               <span class="card-go">Créer mon profil</span>
             </button>
-            <button type="button" class="card" (click)="selectProfile('eleveur')">
+            <button type="button" class="card" (click)="selectProfile('eleveur', 'PISCICULTURE')">
               <span class="card-icon" aria-hidden="true"><i class="ico" style="--icone: url('/icons/pisciculteur.svg')"></i></span>
               <span class="card-title">Pisciculteur</span>
               <span class="card-hint">J’achète des larves pour mes poissons</span>
               <span class="card-go">Créer mon profil</span>
             </button>
-            <button type="button" class="card" (click)="selectProfile('eleveur')">
+            <button type="button" class="card" (click)="selectProfile('eleveur', 'AVICULTURE')">
               <span class="card-icon" aria-hidden="true"><i class="ico" style="--icone: url('/icons/aviculteur.svg')"></i></span>
               <span class="card-title">Aviculteur</span>
               <span class="card-hint">J’achète des larves pour ma volaille</span>
               <span class="card-go">Créer mon profil</span>
             </button>
           </div>
-          <p class="already">Déjà inscrit ? <a routerLink="/connexion">Connectez-vous</a></p>
+          @if (connecte()) {
+            <p class="already">Vous êtes connecté. <a [routerLink]="espace()">Accéder à mon espace</a></p>
+          } @else {
+            <p class="already">Déjà inscrit ? <a routerLink="/connexion">Connectez-vous</a></p>
+          }
 
           <!-- Carrousel des engagements -->
           <div class="values" role="region" aria-label="Nos engagements"
@@ -120,14 +129,14 @@ type Profile = 'producteur' | 'eleveur';
           <nav class="f-links" aria-label="Liens utiles">
             <a routerLink="/inscription/producteur">Devenir producteur</a>
             <a routerLink="/inscription/eleveur">Devenir éleveur</a>
-            <!-- TODO : remplacer par vos vraies coordonnées -->
-            <a href="mailto:contact@bioconversion.bf">contact@bioconversion.bf</a>
+            <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
             <span>Ouagadougou</span>
           </nav>
-          <div class="f-right">
-            <a href="https://wa.me/22600000000" class="wa">WhatsApp</a>
-            <a routerLink="/admin" class="admin">Accès administrateur</a>
-          </div>
+          @if (contact.whatsapp) {
+            <div class="f-right">
+              <a [href]="'https://wa.me/' + contact.whatsapp" class="wa" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            </div>
+          }
         </div>
         <div class="f-credit">
           Icônes : <a href="https://www.flaticon.com/uicons" target="_blank" rel="noopener noreferrer">Flaticon UIcons</a>
@@ -229,11 +238,10 @@ type Profile = 'producteur' | 'eleveur';
     .footer { background: var(--vert-dark); color: #dfe8d6; font-size: 13.5px; }
     .footer-in { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 48px; }
     .f-links { display: flex; align-items: center; gap: 22px; }
-    .f-links a, .admin { text-decoration: none; }
-    .f-links a:hover, .admin:hover { text-decoration: underline; }
+    .f-links a { text-decoration: none; }
+    .f-links a:hover { text-decoration: underline; }
     .f-right { display: flex; align-items: center; gap: 18px; }
     .wa { padding: 4px 14px; border-radius: 999px; background: #25d366; color: #0b3d1c; font-weight: 700; text-decoration: none; }
-    .admin { color: #aebfa3; font-size: 12.5px; }
     .f-credit { padding: 0 20px 10px; text-align: center; font-size: 12px; color: #aebfa3; }
     .f-credit a { color: #dfe8d6; text-decoration: underline; }
     .f-credit a:hover { color: #fff; }
@@ -269,10 +277,18 @@ export class AccueilComponent implements OnInit, OnDestroy {
   line1 = signal('');
   line2 = signal('');
 
-  /* Photos dans frontend/public/carousel/ (photo-1.png ... photo-8.png).
+  /* Coordonnées du footer : le bouton WhatsApp n'apparaît que si un numéro est
+     renseigné (format international sans « + », ex. 22670123456). */
+  readonly contact = { email: 'contact@bioconversion.bf', whatsapp: '' };
+
+  /* Un visiteur déjà connecté retrouve son espace au lieu du bouton de connexion */
+  readonly connecte = computed(() => this.authService.isAuthenticated());
+  readonly espace = computed(() => this.authService.homeRoute());
+
+  /* Photos dans frontend/public/carousel/ (photo-1.webp ... photo-8.webp).
      Défilement toutes les 3,5 s, aller-retour : 1 → 8 puis 8 → 1. */
   photos = [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({
-    src: `/carousel/photo-${n}.png`,
+    src: `/carousel/photo-${n}.webp`,
     alt: `BioConversion, élevage de mouches soldats noires (photo ${n})`,
   }));
   current = signal(0);
@@ -293,7 +309,7 @@ export class AccueilComponent implements OnInit, OnDestroy {
   private slider?: ReturnType<typeof setInterval>;
   private valueTimer?: ReturnType<typeof setInterval>;
 
-  constructor(private router: Router) { }
+  constructor(private router: Router, private authService: AuthService) { }
 
   ngOnInit(): void {
     this.reduceMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -363,7 +379,12 @@ export class AccueilComponent implements OnInit, OnDestroy {
     }, 3000);
   }
 
-  selectProfile(profile: Profile): void {
-    this.router.navigate([profile === 'producteur' ? '/inscription/producteur' : '/inscription/eleveur']);
+  /* Le type d'élevage choisi sur la carte est présélectionné dans le formulaire */
+  selectProfile(profile: Profile, typeElevage?: 'PISCICULTURE' | 'AVICULTURE'): void {
+    if (profile === 'producteur') {
+      this.router.navigate(['/inscription/producteur']);
+    } else {
+      this.router.navigate(['/inscription/eleveur'], { queryParams: typeElevage ? { type: typeElevage } : {} });
+    }
   }
 }

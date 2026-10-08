@@ -5,10 +5,10 @@ import com.bioconversion.common.exception.ResourceNotFoundException;
 import com.bioconversion.marketplace.Commande;
 import com.bioconversion.marketplace.CommandeRepository;
 import com.bioconversion.marketplace.CommandeService;
+import com.bioconversion.marketplace.StatutCommande;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
@@ -81,15 +81,36 @@ public class PaiementServiceImpl implements PaiementService {
                     "Vous n'êtes pas autorisé à initier un paiement pour cette commande");
         }
 
-        if (commande.getPaiement() != null) {
-            throw new BusinessException(
-                    "Un paiement existe déjà pour la commande " + idCommande);
+        // Le règlement n'intervient qu'après la confirmation du producteur :
+        // marquerCommandePayee refuse toute autre origine que CONFIRME.
+        if (commande.getStatut() != StatutCommande.CONFIRME) {
+            throw new BusinessException(commande.getStatut() == StatutCommande.EN_ATTENTE
+                    ? "La commande doit d'abord être confirmée par le producteur avant le paiement"
+                    : "Cette commande ne peut pas être payée (statut actuel : " + commande.getStatut() + ")");
         }
 
         BigDecimal montant = commande.calculerMontantTotal();
         if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(
                     "Impossible d'initier un paiement pour un montant nul ou négatif");
+        }
+
+        Paiement existant = commande.getPaiement();
+        if (existant != null) {
+            return switch (existant.getStatutPaiement()) {
+                // Une demande déjà en cours est reprise telle quelle
+                case EN_ATTENTE -> existant;
+                // Après un échec opérateur, la même ligne repart avec une nouvelle référence
+                case ECHOUE -> {
+                    existant.setOperateur(operateur);
+                    existant.setMontant(montant);
+                    existant.setReferenceTransaction(UUID.randomUUID().toString());
+                    existant.effectuerPaiement();
+                    yield paiementRepository.save(existant);
+                }
+                default -> throw new BusinessException(
+                        "Un paiement existe déjà pour la commande " + idCommande);
+            };
         }
 
         Paiement paiement = Paiement.builder()
@@ -102,6 +123,27 @@ public class PaiementServiceImpl implements PaiementService {
                 .build();
 
         return paiementRepository.save(paiement);
+    }
+
+    @Override
+    @Transactional
+    public Paiement confirmerParSimulation(Long idCommande, boolean succes, Long currentUserId) {
+        Paiement paiement = paiementRepository.findByCommandeIdCommande(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun paiement pour la commande " + idCommande));
+
+        if (!paiement.getCommande().getEleveur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException(
+                    "Vous n'êtes pas autorisé à confirmer ce paiement");
+        }
+        if (paiement.getStatutPaiement() != StatutPaiement.EN_ATTENTE) {
+            throw new BusinessException("Ce paiement n'est plus en attente de confirmation");
+        }
+
+        // Même traitement que le webhook opérateur, déclenché depuis l'interface
+        return succes
+                ? traiterWebhookSucces(paiement.getReferenceTransaction())
+                : traiterWebhookEchec(paiement.getReferenceTransaction());
     }
 
     @Override
@@ -129,12 +171,13 @@ public class PaiementServiceImpl implements PaiementService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Async
     public void genererFactureApresCommit(PaiementConfirmeEvent event) {
         try {
             // C-MUST-5 : génération automatique de la facture après confirmation
             // (diagramme de séquence "Validation et paiement", étape 7).
-            factureService.genererPourPaiement(event.getPaiement());
+            // Le paiement est rechargé dans une transaction neuve : celui de l'événement
+            // est détaché et ses associations ne sont plus lisibles.
+            factureService.genererPourPaiementConfirme(event.getPaiement().getIdPaiement());
             log.info("Facture générée avec succès pour le paiement {}", event.getPaiement().getIdPaiement());
         } catch (Exception e) {
             log.error("Échec de la génération de la facture pour le paiement {} - le paiement reste confirmé", 

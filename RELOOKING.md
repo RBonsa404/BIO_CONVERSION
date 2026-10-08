@@ -34,32 +34,24 @@ Branche : `feature/relooking`
 * Mobile : menu horizontal conservé en haut.
 * Suppression du double affichage de la barre sur le dashboard producteur.
 
-## Points à corriger
+## Points corrigés après la fusion dans `main`
 
-| Sujet | Problème | À faire |
+| Sujet | Problème relevé | Correction |
 | --- | --- | --- |
-| Navigation | Tableau de bord, Commandes et Statistiques ouvrent la même page | Une route et une page par onglet |
-| Navigation | Pas de retour vers l'accueil depuis l'espace connecté | Ajouter un lien « Accueil » |
-| Onglet Profil | Ne mène vers rien | Créer une page Profil (nom, téléphone, rôle) |
-| Compte | Pas de moyen de changer de compte | Ajouter « Changer de profil » et « Se déconnecter » |
-| Sécurité | `/marketplace` et `authGuard` | Vérifier la protection de la route |
-| Images | Photos du carrousel en PNG, trop lourdes | Convertir en WebP |
-| Footer | Numéro WhatsApp et e-mail provisoires | Mettre les vrais |
+| Navigation | Tableau de bord, Commandes et Statistiques ouvraient la même page | Une route et une page par onglet (`/dashboard/producteur`, `/dashboard/commandes`, `/dashboard/statistiques`), plus `/dashboard/produits` |
+| Navigation | Pas de retour vers l'accueil depuis l'espace connecté | Lien « Accueil » dans la barre latérale ; le logo y mène aussi |
+| Onglet Profil | Ne menait vers rien | Page `/profil` : informations, mot de passe, session |
+| Compte | Pas de moyen de changer de compte | « Changer de profil » et « Se déconnecter » en bas de la barre latérale et sur la page Profil |
+| Sécurité | Routes de l'espace connecté accessibles sans connexion | `authGuard` sur tout l'espace connecté et garde de rôle sur chaque page |
+| Images | Photos du carrousel en PNG, trop lourdes (12 Mo) | Converties en WebP (1,4 Mo), logo compris |
+| Accueil | Lien « Accès administrateur » visible de tous | Supprimé ; un visiteur déjà connecté voit « Mon espace » |
+| Admin | Double barre latérale sur `/admin` | Seule celle d'`EspaceLayoutComponent` est conservée |
+| Mobile | Aucun accès à la déconnexion | Les actions du compte suivent le menu horizontal |
 
-### Changer de profil
-
-Pour une personne qui a deux comptes (par exemple producteur et éleveur), ajouter en bas de la barre latérale :
-
-* **Se connecter** : pour un visiteur non connecté.
-* **Changer de profil** : déconnecte puis ramène à l'écran de connexion pour entrer avec l'autre compte.
-* **Se déconnecter**.
+Reste à fournir : le vrai numéro WhatsApp du pied de page (le bouton est masqué tant qu'il est vide) et
+l'adresse e-mail de contact définitive — voir `frontend/README.md`.
 
 Évolution possible : passer d'un compte à l'autre sans ressaisir le mot de passe. Cela demande de lier les comptes côté backend, à décider avec l'équipe.
-
-## Attention
-
-* Conflit possible avec la branche `fix-validation-admin` sur la page `/admin` (`admin.service.ts`) : à résoudre après sa fusion dans `main`.
-* Après la fusion avec `feature/icons-flaticon`, vérifier que l'accueil tient toujours sur un écran et que le crédit Flaticon ne fait pas déborder le footer.
 
 ## Tests à effectuer
 
@@ -75,25 +67,3 @@ Pour une personne qui a deux comptes (par exemple producteur et éleveur), ajout
 ## Commit principal
 
 `feat(front): barre latérale fixe et rétractable, icônes Flaticon`
-NEW
-
-## Points à corriger
-
-Les onglets Tableau de bord, Commandes et Statistiques ouvrent la même page. Il faut une route et une page par onglet.
-
-Il n’y a pas de retour vers l’accueil depuis l’espace connecté. Il faut ajouter un lien « Accueil ».
-
-L’onglet Profil ne mène vers rien. Il faut créer une page Profil (nom, téléphone, rôle).
-
-Il n’y a pas de moyen de changer de compte. Il faut ajouter « Changer de profil » et « Se déconnecter ».
-
-Il faut vérifier la protection de la route /marketplace avec authGuard.
-
-Les photos du carrousel sont en PNG et trop lourdes. Il faut les convertir en WebP.
-
-Le numéro WhatsApp et l’e-mail du footer sont provisoires. Il faut mettre les vrais.
-
-L’accès utilisateur est affiché sur la page d’accueil. Il faut le supprimer.
-
-La page /admin affiche une double barre latérale. Il faut supprimer la barre propre à la page admin et garder uniquement celle
-d’EspaceLayoutComponent.

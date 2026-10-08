@@ -6,13 +6,14 @@ import {
   HttpInterceptor,
   HttpErrorResponse
 } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
 @Injectable()
 export class HttpTokenInterceptor implements HttpInterceptor {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private router: Router) {}
 
   intercept(
     request: HttpRequest<unknown>,
@@ -30,8 +31,16 @@ export class HttpTokenInterceptor implements HttpInterceptor {
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401) {
+        // Session expirée ou révoquée : retour à la connexion, puis à la page demandée.
+        // Un 401 sur la connexion elle-même est une simple erreur d'identifiants.
+        if (error.status === 401 && !request.url.includes('/auth/login')) {
           this.authService.logout();
+          const url = this.router.url;
+          if (!url.startsWith('/connexion')) {
+            this.router.navigate(['/connexion'], {
+              queryParams: { session: 'expiree', retour: url }
+            });
+          }
         }
         return throwError(() => error);
       })

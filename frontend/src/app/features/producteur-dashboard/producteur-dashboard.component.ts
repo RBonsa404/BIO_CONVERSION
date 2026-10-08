@@ -1,187 +1,196 @@
-import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { RouterModule } from '@angular/router';
+import { catchError, forkJoin, of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { Commande, MarketplaceService, ProducteurProfile } from '../../core/services/marketplace.service';
+import { Capteur, IotService } from '../../core/services/iot.service';
+import { Commande, MarketplaceService, Produit } from '../../core/services/marketplace.service';
 import { PaiementService } from '../../core/services/paiement.service';
+import { messageErreur } from '../../core/utils/http-error';
+import { PageHeaderComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-producteur-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule, PageHeaderComponent],
   template: `
     <main class="min-h-screen bg-cream px-5 py-6 md:px-8 md:py-8">
       <div class="mx-auto max-w-7xl">
-        <header class="mb-6 flex items-center gap-4 border-b border-line pb-5">
-          <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-green-soft text-green" aria-hidden="true">♧</span>
-          <div class="min-w-0 flex-1">
-            <h1 class="font-serif text-2xl font-bold text-wine md:text-4xl">
-              Bonjour{{ producteur ? ', ' + producteur.nomExploitation : '' }}
-            </h1>
-            <p class="mt-1 text-text">Votre production fait la différence</p>
-          </div>
+        <app-page-header [titre]="'Bonjour' + (user()?.nomExploitation ? ', ' + user()?.nomExploitation : '')"
+                         sousTitre="Votre production fait la différence">
           <span class="hidden rounded-full bg-green-soft px-4 py-2 text-sm font-semibold text-green sm:inline">
             Espace producteur
           </span>
-        </header>
+        </app-page-header>
 
-        <div *ngIf="isLoading" role="status" class="bg-white rounded-2xl p-6 text-text mb-8">
-          Chargement de votre tableau de bord...
-        </div>
-        <div *ngIf="errorMessage" role="alert" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
-          {{ errorMessage }}
-          <button type="button" (click)="loadDashboard()" class="ml-3 underline font-semibold">Réessayer</button>
-        </div>
-        <div *ngIf="!isLoading && commandesEnAttente.length > 0" class="mb-6 flex items-center gap-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
-          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-100 text-xl" aria-hidden="true">!</span>
-          <p class="flex-1"><strong>Nouvelle commande</strong> — {{ commandesEnAttente.length }} commande(s) à confirmer.</p>
-          <button type="button" (click)="scrollToOrders()" class="font-semibold underline">Voir</button>
-        </div>
-        <div *ngIf="actionMessage" role="status" class="mb-6 rounded-xl bg-green-soft p-4 text-green">
-          {{ actionMessage }}
-        </div>
+        @if (isLoading()) {
+          <div role="status" class="mb-8 rounded-2xl bg-white p-6 text-text">Chargement de votre tableau de bord...</div>
+        }
+        @if (errorMessage()) {
+          <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+            {{ errorMessage() }}
+            <button type="button" (click)="loadDashboard()" class="ml-3 font-semibold underline">Réessayer</button>
+          </div>
+        }
+        @if (actionMessage()) {
+          <div role="status" class="mb-6 rounded-xl bg-green-soft p-4 text-green">{{ actionMessage() }}</div>
+        }
 
-        <ng-container *ngIf="!isLoading && producteur">
-          <section id="stats" class="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-            <article class="rounded-2xl border border-line bg-white p-6 shadow-sm">
-              <span class="mb-4 grid h-14 w-14 place-items-center rounded-full bg-green-soft text-2xl text-green" aria-hidden="true">♧</span>
-              <p class="mb-2 text-sm text-text">Capacité de production</p>
-              <p class="font-serif text-3xl font-bold text-wine">
-                {{ producteur.capaciteProduction }} kg/mois
-              </p>
-            </article>
-            <article class="rounded-2xl border border-line bg-white p-6 shadow-sm">
-              <span class="mb-4 grid h-14 w-14 place-items-center rounded-full bg-green-soft text-2xl text-green" aria-hidden="true">◉</span>
-              <p class="mb-2 text-sm text-text">Paiements confirmés</p>
-              <p class="font-serif text-3xl font-bold text-wine">
-                {{ totalPaiementsConfirmes | number:'1.0-2' }} FCFA
-              </p>
-            </article>
-            <article class="rounded-2xl border border-line bg-white p-6 shadow-sm">
-              <span class="mb-4 grid h-14 w-14 place-items-center rounded-full bg-green-soft text-2xl text-green" aria-hidden="true">▤</span>
-              <p class="mb-2 text-sm text-text">Commandes à traiter</p>
-              <p class="font-serif text-3xl font-bold text-wine">{{ commandesEnAttente.length }}</p>
-            </article>
-          </section>
-
-          <section #ordersSection id="commandes" class="rounded-2xl border border-line bg-white p-5 shadow-sm md:p-6">
-            <h2 class="mb-6 flex items-center gap-3 font-serif text-2xl font-semibold text-wine">
-              <span class="grid h-12 w-12 place-items-center rounded-full bg-green-soft text-xl text-green" aria-hidden="true">▤</span>
-              Commandes en attente de validation
-            </h2>
-            <p *ngIf="commandesEnAttente.length === 0" class="text-text py-6">
-              Aucune commande en attente de validation.
-            </p>
-            <div *ngFor="let commande of commandesEnAttente"
-                 class="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-cream/60 p-4">
-              <div>
-                <p class="inline-flex rounded-lg bg-green-soft px-3 py-1 font-semibold text-green">{{ commande.numeroCommande }}</p>
-                <p class="mt-2 text-sm text-text">{{ commande.nomEleveur }} · {{ commande.dateCommande | date:'short' }}</p>
-                <p *ngFor="let ligne of commande.lignes" class="text-text text-sm">
-                  {{ ligne.nomProduit }} — {{ ligne.quantite }} kg
-                </p>
-                <p class="mt-2 font-semibold text-wine">{{ commande.montantTotal | number:'1.0-2' }} FCFA</p>
-              </div>
-              <div class="flex gap-2">
-                <button type="button" (click)="traiterCommande(commande, true)"
-                        [disabled]="processingId === commande.idCommande"
-                        class="rounded-lg bg-green px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-                  Valider
-                </button>
-                <button type="button" (click)="traiterCommande(commande, false)"
-                        [disabled]="processingId === commande.idCommande"
-                        class="rounded-lg border border-wine bg-white px-5 py-2.5 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">
-                  Refuser
-                </button>
-              </div>
+        @if (!isLoading() && loaded()) {
+          @if (commandesEnAttente().length > 0) {
+            <div class="mb-6 flex items-center gap-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-100 text-xl font-bold" aria-hidden="true">!</span>
+              <p class="flex-1"><strong>Nouvelle commande</strong> — {{ commandesEnAttente().length }} commande(s) à confirmer sous 12 h.</p>
             </div>
+          }
+          @if (capteursEnAlerte() > 0) {
+            <a routerLink="/iot" class="mb-6 flex items-center gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 hover:bg-red-100">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-red-100 text-xl font-bold" aria-hidden="true">!</span>
+              <p class="flex-1"><strong>Alerte capteur</strong> — {{ capteursEnAlerte() }} capteur(s) au-dessus du seuil. Voir les mesures →</p>
+            </a>
+          }
+
+          <section class="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs">
+            <a routerLink="/dashboard/statistiques" class="rounded-2xl border border-line bg-white p-6 shadow-sm transition hover:border-green">
+              <p class="mb-2 text-sm text-text">Paiements confirmés</p>
+              <p class="font-serif text-3xl font-bold text-wine">{{ totalPaiementsConfirmes() | number:'1.0-0' }} <small class="text-base">FCFA</small></p>
+            </a>
+            <a routerLink="/dashboard/commandes" class="rounded-2xl border border-line bg-white p-6 shadow-sm transition hover:border-green">
+              <p class="mb-2 text-sm text-text">Commandes à traiter</p>
+              <p class="font-serif text-3xl font-bold text-wine">{{ commandesATraiter() }}</p>
+            </a>
+            <a routerLink="/dashboard/produits" class="rounded-2xl border border-line bg-white p-6 shadow-sm transition hover:border-green">
+              <p class="mb-2 text-sm text-text">Produits en vente</p>
+              <p class="font-serif text-3xl font-bold text-wine">{{ produitsEnVente() }}</p>
+            </a>
+            <a routerLink="/iot" class="rounded-2xl border border-line bg-white p-6 shadow-sm transition hover:border-green">
+              <p class="mb-2 text-sm text-text">Capteurs actifs</p>
+              <p class="font-serif text-3xl font-bold text-wine">{{ capteursActifs() }}</p>
+            </a>
           </section>
-        </ng-container>
+
+          <section class="rounded-2xl border border-line bg-white p-5 shadow-sm md:p-6">
+            <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <h2 class="font-serif text-2xl font-semibold text-wine">Commandes en attente de validation</h2>
+              <a routerLink="/dashboard/commandes" class="font-semibold text-green hover:underline">Toutes les commandes →</a>
+            </div>
+            @if (commandesEnAttente().length === 0) {
+              <p class="py-6 text-text">Aucune commande en attente de validation.</p>
+            }
+            @for (commande of commandesEnAttente(); track commande.idCommande) {
+              <div class="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-cream/60 p-4">
+                <div>
+                  <p class="inline-flex rounded-lg bg-green-soft px-3 py-1 font-semibold text-green">{{ commande.numeroCommande }}</p>
+                  <p class="mt-2 text-sm text-text">{{ commande.nomEleveur }} · {{ commande.dateCommande | date:'short' }}</p>
+                  @for (ligne of commande.lignes; track ligne.idLigne) {
+                    <p class="text-sm text-text">{{ ligne.nomProduit }} — {{ ligne.quantite }} kg</p>
+                  }
+                  <p class="mt-2 font-semibold text-wine">{{ commande.montantTotal | number:'1.0-0' }} FCFA</p>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button" (click)="traiterCommande(commande, true)"
+                          [disabled]="processingId() === commande.idCommande"
+                          class="rounded-lg bg-green px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                    Valider
+                  </button>
+                  <button type="button" (click)="traiterCommande(commande, false)"
+                          [disabled]="processingId() === commande.idCommande"
+                          class="rounded-lg border border-wine bg-white px-5 py-2.5 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">
+                    Refuser
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
+        }
       </div>
     </main>
   `
 })
 export class ProducteurDashboardComponent implements OnInit {
-  @ViewChild('ordersSection') private ordersSection?: ElementRef<HTMLElement>;
+  readonly commandes = signal<Commande[]>([]);
+  readonly produits = signal<Produit[]>([]);
+  readonly capteurs = signal<Capteur[]>([]);
+  readonly totalPaiementsConfirmes = signal(0);
+  readonly isLoading = signal(false);
+  readonly loaded = signal(false);
+  readonly errorMessage = signal('');
+  readonly actionMessage = signal('');
+  readonly processingId = signal<number | null>(null);
 
-  producteur: ProducteurProfile | null = null;
-  commandes: Commande[] = [];
-  totalPaiementsConfirmes = 0;
-  isLoading = false;
-  errorMessage = '';
-  actionMessage = '';
-  processingId: number | null = null;
+  readonly user = computed(() => this.authService.currentUser());
+  readonly commandesEnAttente = computed(() => this.commandes().filter(c => c.statut === 'EN_ATTENTE'));
+  /* À traiter : à confirmer, ou payées et pas encore expédiées */
+  readonly commandesATraiter = computed(() =>
+    this.commandes().filter(c => c.statut === 'EN_ATTENTE' || c.statut === 'PAYE').length);
+  readonly produitsEnVente = computed(() => this.produits().filter(p => p.disponibilite).length);
+  readonly capteursActifs = computed(() => this.capteurs().filter(c => c.estActif).length);
+  readonly capteursEnAlerte = computed(() => this.capteurs().filter(c => c.estActif && c.enAlerte).length);
 
   constructor(
     private authService: AuthService,
     private marketplaceService: MarketplaceService,
     private paiementService: PaiementService,
-    private changeDetectorRef: ChangeDetectorRef
+    private iotService: IotService
   ) { }
 
   ngOnInit(): void {
     this.loadDashboard();
   }
 
-  get commandesEnAttente(): Commande[] {
-    return this.commandes.filter(commande => commande.statut === 'EN_ATTENTE');
-  }
-
   loadDashboard(): void {
     const user = this.authService.getCurrentUser();
-    if (!user || user.role !== 'PRODUCTEUR') {
-      this.errorMessage = 'Connectez-vous avec un compte producteur pour consulter ce tableau de bord.';
+    if (!user) {
       return;
     }
-    this.isLoading = true;
-    this.errorMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
     forkJoin({
-      producteur: this.marketplaceService.obtenirProducteur(user.idUtilisateur),
       commandes: this.marketplaceService.listerCommandesProducteur(user.idUtilisateur),
-      paiements: this.paiementService.totalPaiementsConfirmes(user.idUtilisateur)
+      paiements: this.paiementService.totalPaiementsConfirmes(user.idUtilisateur),
+      produits: this.marketplaceService.listerMesProduits(),
+      // Les capteurs sont un complément : leur indisponibilité ne bloque pas le tableau de bord
+      capteurs: this.iotService.listerCapteurs().pipe(catchError(() => of({ data: [] as Capteur[] })))
     }).subscribe({
       next: result => {
-        this.producteur = result.producteur.data;
-        this.commandes = result.commandes.data.content;
-        this.totalPaiementsConfirmes = result.paiements.data;
-        this.isLoading = false;
-        this.changeDetectorRef.markForCheck();
+        this.commandes.set(result.commandes.data.content);
+        this.totalPaiementsConfirmes.set(result.paiements.data);
+        this.produits.set(result.produits.data);
+        this.capteurs.set(result.capteurs.data);
+        this.loaded.set(true);
+        this.isLoading.set(false);
       },
-      error: () => {
-        this.errorMessage = 'Impossible de charger le tableau de bord. Vérifiez votre connexion et réessayez.';
-        this.isLoading = false;
-        this.changeDetectorRef.markForCheck();
+      error: error => {
+        this.errorMessage.set(messageErreur(error, 'Impossible de charger le tableau de bord. Vérifiez votre connexion et réessayez.'));
+        this.isLoading.set(false);
       }
     });
   }
 
   traiterCommande(commande: Commande, approuve: boolean): void {
-    this.processingId = commande.idCommande;
-    this.errorMessage = '';
-    this.actionMessage = '';
+    this.processingId.set(commande.idCommande);
+    this.errorMessage.set('');
+    this.actionMessage.set('');
     const request = approuve
       ? this.marketplaceService.confirmerCommande(commande.idCommande)
       : this.marketplaceService.refuserCommande(commande.idCommande);
     request.subscribe({
       next: response => {
-        this.commandes = this.commandes.map(item =>
+        this.commandes.update(list => list.map(item =>
           item.idCommande === commande.idCommande ? response.data : item
-        );
-        this.actionMessage = approuve
-          ? `La commande ${commande.numeroCommande} a été validée.`
-          : `La commande ${commande.numeroCommande} a été refusée.`;
-        this.processingId = null;
-        this.changeDetectorRef.markForCheck();
+        ));
+        this.actionMessage.set(approuve
+          ? `La commande ${commande.numeroCommande} est validée : l’éleveur peut maintenant la régler.`
+          : `La commande ${commande.numeroCommande} a été refusée, le stock est rétabli.`);
+        this.processingId.set(null);
       },
-      error: () => {
-        this.errorMessage = `Impossible de ${approuve ? 'valider' : 'refuser'} la commande ${commande.numeroCommande}. Réessayez.`;
-        this.processingId = null;
-        this.changeDetectorRef.markForCheck();
+      error: error => {
+        this.errorMessage.set(messageErreur(error,
+          `Impossible de ${approuve ? 'valider' : 'refuser'} la commande ${commande.numeroCommande}. Réessayez.`));
+        this.processingId.set(null);
+        // Le délai de 12 h a pu faire expirer la commande : on recharge l'état réel
+        this.loadDashboard();
       }
     });
-  }
-
-  scrollToOrders(): void {
-    this.ordersSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

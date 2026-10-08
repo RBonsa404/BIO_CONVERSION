@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardArea, SidebarLayoutComponent } from '../sidebar-layout/sidebar-layout.component';
@@ -8,7 +8,7 @@ import { DashboardArea, SidebarLayoutComponent } from '../sidebar-layout/sidebar
     standalone: true,
     imports: [RouterOutlet, SidebarLayoutComponent],
     template: `
-    <app-sidebar-layout [area]="area">
+    <app-sidebar-layout [area]="area()">
       <router-outlet></router-outlet>
     </app-sidebar-layout>
   `
@@ -17,10 +17,10 @@ export class EspaceLayoutComponent {
     constructor(private authService: AuthService) { }
 
     /* Le menu s'adapte au rôle de la personne connectée */
-    get area(): DashboardArea {
-        const role = this.authService.getCurrentUser()?.role;
+    readonly area = computed<DashboardArea>(() => {
+        const role = this.authService.currentUserRole();
         if (role === 'PRODUCTEUR') return 'producer';
-        if (role === 'ADMINISTRATEUR') return 'admin';
+        if (role === 'ADMINISTRATEUR' || role === 'SUPER_ADMINISTRATEUR') return 'admin';
         return 'breeder';
-    }
+    });
 }

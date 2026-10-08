@@ -1,3 +1,11 @@
+server:
+  # Les hébergeurs (Railway, Render...) imposent le port via la variable PORT.
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,text/javascript,application/javascript,application/json,image/svg+xml
+
 spring:
   application:
     name: bioconversion-backend
@@ -24,6 +32,12 @@ spring:
       max-file-size: 10MB
       max-request-size: 12MB
 
+  web:
+    resources:
+      # Le frontend Angular compilé est servi par le backend : embarqué dans le jar
+      # (classpath:/static/, image Docker) ou lu depuis le dossier de build local.
+      static-locations: classpath:/static/,file:./frontend/dist/frontend/browser/
+
 logging:
   level:
     com.bioconversion: INFO
@@ -43,7 +57,7 @@ app:
     secret: ${JWT_SECRET:changeme-at-least-256-bits-long-for-hs256-algorithm-!!}
     expiration-ms: 86400000
   security:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
   upload:
     identite-dir: ${UPLOAD_DIR:./uploads/identites}
   factures:
@@ -54,14 +68,24 @@ app:
     taux: ${COMMISSION_TAUX:0.05}
   paiement:
     webhook-secret: ${WEBHOOK_SECRET:dev-secret-change-in-production}
+    # Tant que l'agrégateur Orange Money n'est pas branché, la confirmation opérateur
+    # est simulée depuis l'interface. Passer à false dès que le webhook réel est actif.
+    simulation: ${PAIEMENT_SIMULATION:true}
   iot:
     api-key: ${IOT_API_KEY:dev-iot-api-key-change-in-production}
+  demo:
+    # Comptes et catalogue de démonstration créés au démarrage s'ils n'existent pas.
+    enabled: ${DEMO_DATA:false}
+  admin:
+    # Compte administrateur créé au premier démarrage si les deux valeurs sont fournies.
+    telephone: ${ADMIN_TELEPHONE:}
+    mot-de-passe: ${ADMIN_MOT_DE_PASSE:}
   entreprise:
-    nom: "BIO CONVERSION"
-    ifu: "IFU_PLACEHOLDER"
-    rccm: "RCCM_PLACEHOLDER"
-    adresse: "Adresse placeholder"
-    telephone: "+226 00 00 00 00"
-    email: "contact@bioconversion.bf"
-    banque: "Bank placeholder"
-    iban: "IBAN_PLACEHOLDER"
+    nom: ${ENTREPRISE_NOM:BIO CONVERSION}
+    ifu: ${ENTREPRISE_IFU:À renseigner}
+    rccm: ${ENTREPRISE_RCCM:À renseigner}
+    adresse: ${ENTREPRISE_ADRESSE:Ouagadougou, Burkina Faso}
+    telephone: ${ENTREPRISE_TELEPHONE:À renseigner}
+    email: ${ENTREPRISE_EMAIL:contact@bioconversion.bf}
+    banque: ${ENTREPRISE_BANQUE:À renseigner}
+    iban: ${ENTREPRISE_IBAN:À renseigner}

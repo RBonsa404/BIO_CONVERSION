@@ -1,10 +1,14 @@
 package com.bioconversion.marketplace;
 
 import com.bioconversion.common.exception.BusinessException;
+import com.bioconversion.common.exception.ForbiddenException;
 import com.bioconversion.common.exception.ResourceNotFoundException;
 import com.bioconversion.geo.Localisation;
 import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
 import com.bioconversion.marketplace.dto.ProduitDto;
+import com.bioconversion.marketplace.dto.ProduitRequest;
+import com.bioconversion.paiement.Paiement;
+import com.bioconversion.paiement.StatutPaiement;
 import com.bioconversion.utilisateur.Eleveur;
 import com.bioconversion.utilisateur.EleveurRepository;
 import com.bioconversion.utilisateur.Producteur;
@@ -169,10 +173,50 @@ public class MarketplaceServiceImpl implements MarketplaceService {
         if (nouveauStatut == StatutCommande.ANNULE || nouveauStatut == StatutCommande.REFUSE
                 || nouveauStatut == StatutCommande.NON_CONFIRMEE) {
             restituerStock(commande);
+            solderPaiement(commande);
         }
 
         commande.setStatut(nouveauStatut);
         return commandeRepository.save(commande);
+    }
+
+    /**
+     * Une commande qui n'ira pas à son terme ne doit pas garder un règlement actif :
+     * un paiement confirmé passe à rembourser, un paiement en attente est abandonné.
+     */
+    private void solderPaiement(Commande commande) {
+        Paiement paiement = commande.getPaiement();
+        if (paiement == null) {
+            return;
+        }
+        if (paiement.getStatutPaiement() == StatutPaiement.CONFIRME) {
+            paiement.setStatutPaiement(StatutPaiement.REMBOURSE);
+        } else if (paiement.getStatutPaiement() == StatutPaiement.EN_ATTENTE) {
+            paiement.setStatutPaiement(StatutPaiement.ECHOUE);
+        }
+    }
+
+    @Override
+    @Transactional
+    public Commande changerStatutCommande(Long commandeId, StatutCommande nouveauStatut, Long currentUserId) {
+        Commande commande = commandeRepository.findById(commandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + commandeId));
+
+        boolean estProducteur = commande.getProducteur().getIdUtilisateur().equals(currentUserId);
+        boolean estEleveur = commande.getEleveur().getIdUtilisateur().equals(currentUserId);
+        if (!estProducteur && !estEleveur) {
+            throw new ForbiddenException("Vous n'êtes pas autorisé à modifier cette commande");
+        }
+
+        if (nouveauStatut == StatutCommande.EXPEDIE) {
+            if (!estProducteur) {
+                throw new ForbiddenException("Seul le producteur peut déclarer l'expédition de la commande");
+            }
+        } else if (nouveauStatut != StatutCommande.LIVRE) {
+            throw new BusinessException("Ce changement de statut passe par les actions dédiées "
+                    + "(confirmer, refuser, annuler ou payer la commande)");
+        }
+        return changerStatutCommande(commandeId, nouveauStatut);
     }
 
     @Override
@@ -446,6 +490,73 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .filter(Produit::isDisponibilite)
                 .map(this::versProduitDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProduitDto> listerMesProduits(Long producteurId) {
+        return produitRepository.findByProducteurIdUtilisateur(producteurId).stream()
+                .map(this::versProduitDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public ProduitDto publierProduit(ProduitRequest request, Long producteurId) {
+        Producteur producteur = producteurRepository.findById(producteurId)
+                .orElseThrow(() -> new ForbiddenException("Seul un producteur peut publier un produit"));
+        Produit produit = Produit.builder()
+                .producteur(producteur)
+                .nomProduit(request.getNomProduit().trim())
+                .typeProduit(request.getTypeProduit() != null ? request.getTypeProduit() : TypeProduit.LARVE)
+                .prix(request.getPrix())
+                .quantiteStock(request.getQuantiteStock())
+                .disponibilite(true)
+                .build();
+        return versProduitDto(produitRepository.save(produit));
+    }
+
+    @Override
+    @Transactional
+    public ProduitDto modifierProduit(Long produitId, ProduitRequest request, Long currentUserId) {
+        Produit produit = trouverProduitDuProducteur(produitId, currentUserId);
+        produit.setNomProduit(request.getNomProduit().trim());
+        if (request.getTypeProduit() != null) {
+            produit.setTypeProduit(request.getTypeProduit());
+        }
+        produit.setPrix(request.getPrix());
+        produit.setQuantiteStock(request.getQuantiteStock());
+        return versProduitDto(produitRepository.save(produit));
+    }
+
+    @Override
+    @Transactional
+    public ProduitDto republierProduit(Long produitId, Long currentUserId) {
+        Produit produit = trouverProduitDuProducteur(produitId, currentUserId);
+        produit.setDisponibilite(true);
+        return versProduitDto(produitRepository.save(produit));
+    }
+
+    private Produit trouverProduitDuProducteur(Long produitId, Long currentUserId) {
+        Produit produit = produitRepository.findById(produitId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'ID : " + produitId));
+        if (!produit.getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new ForbiddenException("Vous n'êtes pas autorisé à modifier ce produit");
+        }
+        return produit;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProduitDto> rechercherProduitsParRayonDto(double latitude, double longitude, double rayonKm) {
+        return rechercherProduitsParRayon(latitude, longitude, rayonKm).stream()
+                .map(this::versProduitDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ProduitDto versDto(Produit produit) {
+        return versProduitDto(produit);
     }
 
     private ProduitDto versProduitDto(Produit produit) {

@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * Module C — Paiement Intégré (Orange Money).
@@ -103,6 +104,38 @@ public class PaiementController {
         Paiement paiement = paiementService.consulterParCommande(idCommande, currentUserId);
 
         return ResponseEntity.ok(ApiResponse.success(PaiementResponse.from(paiement)));
+    }
+
+    /**
+     * Indique au frontend si la confirmation opérateur est simulée.
+     */
+    @GetMapping("/mode")
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> modePaiement() {
+        return ResponseEntity.ok(ApiResponse.success(
+                Map.of("simulation", appProperties.paiement().simulation())));
+    }
+
+    /**
+     * Réponse opérateur simulée (succès ou échec) pour le paiement en attente d'une
+     * commande. Indisponible dès que {@code app.paiement.simulation} vaut false.
+     */
+    @PostMapping("/commande/{idCommande}/simulation")
+    public ResponseEntity<ApiResponse<PaiementResponse>> simulerReponseOperateur(
+            @PathVariable Long idCommande,
+            @RequestParam(defaultValue = "true") boolean succes) {
+
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!appProperties.paiement().simulation()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("La simulation de paiement est désactivée"));
+        }
+
+        Paiement paiement = paiementService.confirmerParSimulation(idCommande, succes, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(PaiementResponse.from(paiement),
+                succes ? "Paiement confirmé" : "Échec du paiement enregistré"));
     }
 
     @GetMapping("/producteur/{producteurId}/solde")

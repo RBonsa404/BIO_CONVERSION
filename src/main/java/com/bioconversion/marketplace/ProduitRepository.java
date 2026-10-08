@@ -18,4 +18,6 @@ public interface ProduitRepository extends JpaRepository<Produit, Long> {
     List<Produit> findByProducteurIdUtilisateur(Long producteurId);
 
     Page<Produit> findByProducteurLocalisationProvinceIgnoreCase(String province, Pageable pageable);
+
+    long countByDisponibiliteTrue();
 }

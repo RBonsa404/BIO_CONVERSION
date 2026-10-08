@@ -50,9 +50,24 @@ public record AppProperties(
 
                 FacturesProperties factures,
 
-                IotProperties iot
+                IotProperties iot,
+
+                DemoProperties demo,
+
+                AdminProperties admin
 
 ) {
+
+        /** Jeu de données de démonstration créé au démarrage. */
+        public record DemoProperties(
+                        boolean enabled) {
+        }
+
+        /** Compte administrateur initial, créé s'il n'existe pas encore. */
+        public record AdminProperties(
+                        String telephone,
+                        String motDePasse) {
+        }
 
         public record JwtProperties(
                         @NotBlank String secret,
@@ -101,7 +116,8 @@ public record AppProperties(
          * Configuration du module de paiement, notamment la sécurité du webhook.
          */
         public record PaiementProperties(
-                        @NotBlank String webhookSecret) {
+                        @NotBlank String webhookSecret,
+                        boolean simulation) {
         }
 
         /**

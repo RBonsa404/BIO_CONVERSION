@@ -1,9 +1,16 @@
 .git
 .mvn
 target
-frontend
+data
 factures
+uploads
 *.md
 mvnw
 mvnw.cmd
 docker-compose.yml
+.env
+
+# Frontend : seules les sources entrent dans l'image, le build s'y fait
+frontend/node_modules
+frontend/dist
+frontend/.angular

@@ -57,6 +57,25 @@ public class FactureController {
     }
 
     /**
+     * Facture d'une commande payée, pour l'éleveur ou le producteur concerné.
+     */
+    @GetMapping("/commande/{idCommande}/telecharger")
+    public ResponseEntity<byte[]> telechargerPourCommande(@PathVariable Long idCommande) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        byte[] pdf = factureService.telechargerPdfPourCommande(idCommande, currentUserId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"facture-commande-" + idCommande + ".pdf\"")
+                .body(pdf);
+    }
+
+    /**
      * imprimer() du diagramme de classes — même PDF, affiché en ligne (inline)
      * pour que le navigateur l'ouvre directement (l'utilisateur imprime depuis
      * sa visionneuse PDF plutôt qu'un rendu serveur dédié à l'impression).

@@ -1,7 +1,8 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { messageErreur } from '../../../core/utils/http-error';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -29,7 +30,7 @@ import { CommonModule } from '@angular/common';
               class="mr-0 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-wine bg-green-soft sm:mr-4"
             >
               <img
-                src="/logo.png"
+                src="/logo.webp"
                 alt="Emblème BioConversion"
                 class="h-full w-full object-contain"
               >
@@ -45,6 +46,14 @@ import { CommonModule } from '@angular/common';
             Connectez-vous à votre compte BioConversion
           </p>
 
+        </div>
+
+        <div
+          *ngIf="infoMessage"
+          role="status"
+          class="mb-6 rounded-xl border border-green bg-green-soft p-4 text-sm text-green"
+        >
+          {{ infoMessage }}
         </div>
 
         <!-- Formulaire -->
@@ -201,6 +210,7 @@ import { CommonModule } from '@angular/common';
           <!-- Message d'erreur -->
           <div
             *ngIf="errorMessage"
+            role="alert"
             class="mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 text-sm"
           >
             {{ errorMessage }}
@@ -212,7 +222,7 @@ import { CommonModule } from '@angular/common';
         <div class="mt-8 text-center">
 
           <a
-            (click)="goToAccueil()"
+            routerLink="/accueil"
             class="text-wine hover:text-wine-dark underline font-semibold cursor-pointer"
           >
             Retour à l'accueil
@@ -230,7 +240,7 @@ import { CommonModule } from '@angular/common';
     }
   `
 })
-export class ConnexionComponent {
+export class ConnexionComponent implements OnInit {
 
   loginForm: FormGroup;
 
@@ -238,13 +248,20 @@ export class ConnexionComponent {
 
   errorMessage = '';
 
+  // Information affichée à l'arrivée (inscription réussie, session expirée)
+  infoMessage = '';
+
   // Contrôle l'affichage du mot de passe
   showPassword = false;
+
+  // Page demandée avant la connexion, s'il y en a une
+  private retour: string | null = null;
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private changeDetectorRef: ChangeDetectorRef
   ) {
 
@@ -253,6 +270,19 @@ export class ConnexionComponent {
       motDePasse: ['', [Validators.required]]
     });
 
+  }
+
+  ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const retour = params.get('retour');
+    // Seuls les chemins internes sont acceptés comme destination de retour
+    this.retour = retour && retour.startsWith('/') && !retour.startsWith('//') ? retour : null;
+
+    if (params.get('inscription') === 'ok') {
+      this.infoMessage = 'Votre compte a bien été créé. Il sera utilisable dès sa validation par un administrateur.';
+    } else if (params.get('session') === 'expiree') {
+      this.infoMessage = 'Votre session a expiré. Reconnectez-vous pour continuer.';
+    }
   }
 
   /**
@@ -273,6 +303,7 @@ export class ConnexionComponent {
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.infoMessage = '';
 
     this.authService.login(this.loginForm.value).subscribe({
 
@@ -280,23 +311,9 @@ export class ConnexionComponent {
 
         this.isLoading = false;
 
-        // Redirection selon le rôle de l'utilisateur
-        if (response.utilisateur.role === 'PRODUCTEUR') {
-
-          this.router.navigate(['/dashboard/producteur']);
-
-        } else if (response.utilisateur.role === 'ELEVEUR') {
-
-          this.router.navigate(['/marketplace']);
-
-        } else if (
-          response.utilisateur.role === 'ADMINISTRATEUR' ||
-          response.utilisateur.role === 'SUPER_ADMINISTRATEUR'
-        ) {
-
-          this.router.navigate(['/admin']);
-
-        }
+        // Retour à la page demandée, sinon espace correspondant au rôle
+        // (les gardes de routes renvoient vers le bon espace si le rôle ne convient pas)
+        this.router.navigateByUrl(this.retour ?? this.authService.homeRoute(response.utilisateur.role));
 
       },
 
@@ -304,8 +321,8 @@ export class ConnexionComponent {
 
         this.isLoading = false;
 
-        this.errorMessage =
-          'Numéro de téléphone ou mot de passe incorrect';
+        // Le backend précise la cause : identifiants, compte en attente, refusé ou suspendu
+        this.errorMessage = messageErreur(error, 'Numéro de téléphone ou mot de passe incorrect');
 
         this.changeDetectorRef.markForCheck();
 
@@ -313,13 +330,6 @@ export class ConnexionComponent {
 
     });
 
-  }
-
-  /**
-   * Retour à la page d'accueil
-   */
-  goToAccueil(): void {
-    this.router.navigate(['/accueil']);
   }
 
 }

@@ -3,10 +3,13 @@ package com.bioconversion.config;
 import com.bioconversion.security.JwtAuthenticationFilter;
 import com.bioconversion.security.IotApiKeyFilter;
 import com.bioconversion.security.BioUserDetailsService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -21,6 +24,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Configuration Spring Security.
@@ -42,12 +48,21 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * commissions)</li>
  * </ul>
  * </p>
+ *
+ * <p>
+ * Seules les routes {@code /api/**} sont protégées : tout le reste correspond au
+ * frontend Angular (fichiers statiques et routes de l'application monopage).
+ * </p>
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final String[] ADMINS = { "ADMINISTRATEUR", "SUPER_ADMINISTRATEUR" };
+    private static final String[] TOUS_LES_ROLES = { "PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR",
+            "SUPER_ADMINISTRATEUR" };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final IotApiKeyFilter iotApiKeyFilter;
@@ -66,6 +81,14 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
+                // 401 quand le token est absent/expiré, 403 quand le rôle ne suffit pas :
+                // le frontend s'appuie sur cette distinction pour renvoyer vers la connexion.
+                .exceptionHandling(eh -> eh
+                        .authenticationEntryPoint((request, response, ex) -> ecrireErreur(response,
+                                HttpStatus.UNAUTHORIZED, "Authentification requise"))
+                        .accessDeniedHandler((request, response, ex) -> ecrireErreur(response,
+                                HttpStatus.FORBIDDEN, "Accès refusé")))
+
                 // Règles d'autorisation
                 .authorizeHttpRequests(auth -> auth
 
@@ -75,6 +98,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/register/**",
                                 "/api/v1/auth/login")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
 
                         // Webhook Orange Money (callbacks bancaires/opérateurs)
                         .requestMatchers(HttpMethod.POST,
@@ -88,29 +112,34 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .permitAll()
 
-                        // ── Module A — IoT — Uses API key authentication (not JWT)
+                        // ── Module A — IoT ─────────────────────────────────
+                        // La télémétrie des capteurs est authentifiée par clé d'API (IotApiKeyFilter)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/iot/telemetrie").permitAll()
                         .requestMatchers("/api/v1/iot/**")
-                        .permitAll()
+                        .hasAnyRole("PRODUCTEUR", "ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
 
                         // ── Module B — Marketplace ────────────────────────
                         .requestMatchers("/api/v1/marketplace/**")
-                        .hasAnyRole("PRODUCTEUR", "ELEVEUR", "ADMINISTRATEUR")
+                        .hasAnyRole(TOUS_LES_ROLES)
 
                         // ── Module C — Paiement ───────────────────────────
                         .requestMatchers("/api/v1/paiements/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
+                        .hasAnyRole(TOUS_LES_ROLES)
                         .requestMatchers("/api/v1/factures/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR")
+                        .hasAnyRole(TOUS_LES_ROLES)
 
                         // ── Module D — Réseau Producteurs ─────────────────
                         .requestMatchers("/api/v1/producteurs/**")
-                        .hasAnyRole("ELEVEUR", "PRODUCTEUR", "ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
+                        .hasAnyRole(TOUS_LES_ROLES)
 
-                        // ── Profil utilisateur & auth ─────────────────────
-                        .requestMatchers("/api/v1/auth/**").authenticated()
+                        // ── Administration ────────────────────────────────
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole(ADMINS)
 
-                        // Tout le reste exige une authentification
-                        .anyRequest().authenticated())
+                        // Toute autre route d'API exige une authentification
+                        .requestMatchers("/api/**").authenticated()
+
+                        // Frontend Angular : fichiers statiques et routes de l'application
+                        .anyRequest().permitAll())
 
                 // Fournisseur d'authentification DAO
                 .authenticationProvider(authenticationProvider())
@@ -123,6 +152,16 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private static void ecrireErreur(HttpServletResponse response, HttpStatus statut, String message)
+            throws IOException {
+        response.setStatus(statut.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write("{\"status\":" + statut.value()
+                + ",\"error\":\"" + statut.getReasonPhrase()
+                + "\",\"message\":\"" + message + "\"}");
     }
 
     @Bean
