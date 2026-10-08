@@ -18,7 +18,10 @@ import lombok.Setter;
 @Builder
 public class PasserCommandeRequest {
 
-    @NotNull(message = "L'identifiant de l'éleveur est obligatoire")
+    /**
+     * Conservé pour compatibilité : l'éleveur est toujours celui du jeton JWT,
+     * jamais celui transmis par le client.
+     */
     private Long eleveurId;
 
     @NotNull(message = "L'identifiant du produit est obligatoire")

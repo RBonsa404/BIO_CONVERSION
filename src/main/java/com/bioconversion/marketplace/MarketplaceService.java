@@ -2,6 +2,7 @@ package com.bioconversion.marketplace;
 
 import com.bioconversion.marketplace.dto.ProducteurLocaliseDto;
 import com.bioconversion.marketplace.dto.ProduitDto;
+import com.bioconversion.marketplace.dto.ProduitRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
@@ -68,4 +69,27 @@ public interface MarketplaceService extends CommandeService {
      * Consultation du catalogue d'un producteur sous forme de DTO (B-MUST-2 & Contrat Binôme).
      */
     List<ProduitDto> consulterCatalogueProducteurDto(Long producteurId);
+
+    // ── Gestion du catalogue par le producteur connecté ─────────────────────
+
+    /** Tous les produits du producteur, y compris ceux retirés de la vente. */
+    List<ProduitDto> listerMesProduits(Long producteurId);
+
+    ProduitDto publierProduit(ProduitRequest request, Long producteurId);
+
+    ProduitDto modifierProduit(Long produitId, ProduitRequest request, Long currentUserId);
+
+    /** Remet en vente un produit précédemment retiré. */
+    ProduitDto republierProduit(Long produitId, Long currentUserId);
+
+    List<ProduitDto> rechercherProduitsParRayonDto(double latitude, double longitude, double rayonKm);
+
+    /** Conversion d'un produit chargé dans la transaction courante. */
+    ProduitDto versDto(Produit produit);
+
+    /**
+     * Suivi de livraison par les parties de la commande : le producteur marque
+     * l'expédition, le producteur ou l'éleveur confirme la livraison.
+     */
+    Commande changerStatutCommande(Long commandeId, StatutCommande nouveauStatut, Long currentUserId);
 }

@@ -107,29 +107,37 @@ class MarketplaceCommandeControllerTest {
     }
 
     @Test
-    @DisplayName("Devrait modifier le statut via PATCH /api/v1/marketplace/commandes/{id}/statut")
+    @WithMockUser(username = "7")
+    @DisplayName("Devrait déclarer l'expédition via PATCH /api/v1/marketplace/commandes/{id}/statut")
     void changerStatut_RetourneHttp200() throws Exception {
         ChangerStatutCommandeRequest request = ChangerStatutCommandeRequest.builder()
-                .nouveauStatut(StatutCommande.CONFIRME)
+                .nouveauStatut(StatutCommande.EXPEDIE)
                 .build();
 
-        Commande commande = Commande.builder()
-                .idCommande(50L)
-                .numeroCommande("CMD-20260922-12345678")
-                .statut(StatutCommande.CONFIRME)
-                .dateCommande(OffsetDateTime.now())
-                .lignes(new ArrayList<>())
-                .build();
-
-        given(marketplaceService.changerStatutCommande(eq(50L), eq(StatutCommande.CONFIRME)))
-                .willReturn(commande);
+        given(marketplaceService.changerStatutCommande(eq(50L), eq(StatutCommande.EXPEDIE), eq(7L)))
+                .willReturn(commande(50L, StatutCommande.EXPEDIE));
 
         mockMvc.perform(patch("/api/v1/marketplace/commandes/50/statut")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.statut").value("CONFIRME"));
+                .andExpect(jsonPath("$.data.statut").value("EXPEDIE"));
+
+        verify(marketplaceService).changerStatutCommande(50L, StatutCommande.EXPEDIE, 7L);
+    }
+
+    @Test
+    @DisplayName("Devrait refuser un changement de statut sans authentification")
+    void changerStatut_SansAuthentification_RetourneHttp401() throws Exception {
+        ChangerStatutCommandeRequest request = ChangerStatutCommandeRequest.builder()
+                .nouveauStatut(StatutCommande.EXPEDIE)
+                .build();
+
+        mockMvc.perform(patch("/api/v1/marketplace/commandes/50/statut")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
     }
 
     private Commande commande(Long id, StatutCommande statut) {
