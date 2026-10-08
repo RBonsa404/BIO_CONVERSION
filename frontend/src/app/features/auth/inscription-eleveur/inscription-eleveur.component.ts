@@ -1,7 +1,9 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { messageErreur } from '../../../core/utils/http-error';
+import { Position, champsIdentiques, obtenirPosition, telephoneBurkinabe } from '../../../core/utils/validators';
 import { AuthService } from '../../../core/services/auth.service';
 import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-request.model';
 
@@ -23,7 +25,7 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
         <div class="mb-8 text-left">
           <div class="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-wine bg-green-soft sm:mr-4">
-              <img src="/logo.png" alt="Emblème BioConversion" class="h-full w-full object-contain">
+              <img src="/logo.webp" alt="Emblème BioConversion" class="h-full w-full object-contain">
             </div>
             <h1 class="font-serif text-4xl font-bold text-wine md:text-5xl">Inscription éleveur</h1>
           </div>
@@ -89,7 +91,7 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
                 class="w-full px-4 py-3 border-2 border-line rounded-xl focus:outline-none focus:border-wine focus:ring-2 focus:ring-wine/20 transition-all"
               />
               <div *ngIf="inscriptionForm.get('telephone')?.touched && inscriptionForm.get('telephone')?.invalid" class="text-red-500 text-sm mt-2">
-                Le numéro de téléphone est requis
+                Saisissez un numéro à 8 chiffres (ex. +226 70 12 34 56)
               </div>
             </div>
 
@@ -177,6 +179,16 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
                 class="w-full px-4 py-3 border-2 border-line rounded-xl focus:outline-none focus:border-wine focus:ring-2 focus:ring-wine/20 transition-all resize-none"
               ></textarea>
             </div>
+
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <button type="button" (click)="localiser()" [disabled]="isLocating"
+                      class="rounded-xl border-2 border-green px-4 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                {{ isLocating ? 'Localisation en cours...' : (position ? 'Actualiser ma position' : 'Utiliser ma position actuelle') }}
+              </button>
+              <p class="text-sm text-text" role="status">
+                {{ positionMessage || 'Facultatif : partagez votre position pour trouver les producteurs les plus proches.' }}
+              </p>
+            </div>
           </div>
 
           <!-- Account information section -->
@@ -217,7 +229,7 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
                 placeholder="•••••••••"
                 class="w-full px-4 py-3 border-2 border-line rounded-xl focus:outline-none focus:border-wine focus:ring-2 focus:ring-wine/20 transition-all"
               />
-              <div *ngIf="inscriptionForm.get('confirmationMotDePasse')?.touched && inscriptionForm.get('confirmationMotDePasse')?.invalid" class="text-red-500 text-sm mt-2">
+              <div *ngIf="inscriptionForm.get('confirmationMotDePasse')?.touched && (inscriptionForm.get('confirmationMotDePasse')?.invalid || inscriptionForm.hasError('confirmation'))" class="text-red-500 text-sm mt-2">
                 Les mots de passe ne correspondent pas
               </div>
             </div>
@@ -253,44 +265,65 @@ import { EleveurRegisterRequest } from '../../../core/models/eleveur-register-re
     }
   `
 })
-export class InscriptionEleveurComponent {
+export class InscriptionEleveurComponent implements OnInit {
   inscriptionForm: FormGroup;
   isLoading = false;
   errorMessage = '';
 
+  // Position GPS facultative (consentement explicite de l'éleveur)
+  position: Position | null = null;
+  positionMessage = '';
+  isLocating = false;
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private authService: AuthService,
     private changeDetectorRef: ChangeDetectorRef
   ) {
     this.inscriptionForm = this.fb.group({
       nom: ['', [Validators.required]],
       prenom: ['', [Validators.required]],
-      telephone: ['', [Validators.required]],
+      telephone: ['', [Validators.required, telephoneBurkinabe]],
       motDePasse: ['', [Validators.required, Validators.minLength(6)]],
       confirmationMotDePasse: ['', [Validators.required]],
       typeElevage: ['', [Validators.required]],
       adresse: [''],
       province: [''],
-      ville: [''],
-      latitude: [''],
-      longitude: ['']
-    }, { validator: this.passwordMatchValidator });
+      ville: ['']
+    }, { validators: champsIdentiques('motDePasse', 'confirmationMotDePasse') });
   }
 
-  passwordMatchValidator(form: FormGroup): { [key: string]: boolean } | null {
-    const password = form.get('motDePasse');
-    const confirmation = form.get('confirmationMotDePasse');
-    
-    if (password && confirmation && password.value !== confirmation.value) {
-      return { passwordMismatch: true };
+  ngOnInit(): void {
+    // Carte « Pisciculteur » ou « Aviculteur » choisie sur la page d'accueil
+    const type = this.route.snapshot.queryParamMap.get('type');
+    if (type === 'PISCICULTURE' || type === 'AVICULTURE') {
+      this.inscriptionForm.patchValue({ typeElevage: type });
     }
-    return null;
+  }
+
+  localiser(): void {
+    this.isLocating = true;
+    this.positionMessage = '';
+    obtenirPosition()
+      .then(position => {
+        this.position = position;
+        this.positionMessage = 'Position enregistrée.';
+      })
+      .catch((message: string) => {
+        this.position = null;
+        this.positionMessage = message;
+      })
+      .finally(() => {
+        this.isLocating = false;
+        this.changeDetectorRef.markForCheck();
+      });
   }
 
   onSubmit(): void {
     if (this.inscriptionForm.invalid) {
+      this.inscriptionForm.markAllAsTouched();
       return;
     }
 
@@ -306,17 +339,19 @@ export class InscriptionEleveurComponent {
       typeElevage: formValue.typeElevage,
       ...(formValue.adresse ? { adresse: formValue.adresse } : {}),
       ...(formValue.province ? { province: formValue.province } : {}),
-      ...(formValue.ville ? { ville: formValue.ville } : {})
+      ...(formValue.ville ? { ville: formValue.ville } : {}),
+      ...(this.position ?? {})
     };
 
     this.authService.registerEleveur(cleanedData).subscribe({
-      next: (response) => {
+      next: () => {
         this.isLoading = false;
-        this.router.navigate(['/connexion']);
+        // Le compte reste en attente tant qu'un administrateur ne l'a pas validé
+        this.router.navigate(['/connexion'], { queryParams: { inscription: 'ok' } });
       },
-      error: (error) => {
+      error: (error: unknown) => {
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Erreur lors de l\'inscription. Veuillez réessayer.';
+        this.errorMessage = messageErreur(error, 'Erreur lors de l\'inscription. Veuillez réessayer.');
         this.changeDetectorRef.markForCheck();
       }
     });

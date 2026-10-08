@@ -2,6 +2,8 @@ import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { messageErreur } from '../../../core/utils/http-error';
+import { Position, champsIdentiques, obtenirPosition, telephoneBurkinabe } from '../../../core/utils/validators';
 import { AuthService } from '../../../core/services/auth.service';
 import { ProducteurRegisterRequest } from '../../../core/models/producteur-register-request.model';
 
@@ -16,7 +18,7 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
         <div class="mb-8 text-left">
           <div class="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-wine bg-green-soft sm:mr-4">
-              <img src="/logo.png" alt="Emblème BioConversion" class="h-full w-full object-contain">
+              <img src="/logo.webp" alt="Emblème BioConversion" class="h-full w-full object-contain">
             </div>
             <h1 class="font-serif text-4xl font-bold text-wine md:text-5xl">Inscription producteur</h1>
           </div>
@@ -151,11 +153,27 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
                   class="w-full px-4 py-3 border-2 border-line rounded-xl focus:outline-none focus:border-wine transition-all"
                 />
               </div>
+              <div class="md:col-span-2 flex flex-wrap items-center gap-3">
+                <button type="button" (click)="localiser()" [disabled]="isLocating"
+                        class="rounded-xl border-2 border-green px-4 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                  {{ isLocating ? 'Localisation en cours...' : (position ? 'Actualiser ma position' : 'Utiliser ma position actuelle') }}
+                </button>
+                <p class="text-sm text-text" role="status">
+                  {{ positionMessage || 'Facultatif : placez votre exploitation sur la carte des éleveurs. Sans position, elle est située à Ouagadougou.' }}
+                </p>
+              </div>
             </div>
           </div>
 
+          <p *ngIf="inscriptionForm.touched && inscriptionForm.invalid" class="mb-4 text-sm text-red-600" role="alert">
+            <span *ngIf="invalide('telephone')">Le numéro de téléphone doit comporter 8 chiffres (ex. +226 70 12 34 56). </span>
+            <span *ngIf="invalide('motDePasse')">Le mot de passe doit contenir au moins 6 caractères. </span>
+            <span *ngIf="inscriptionForm.hasError('confirmation')">Les mots de passe ne correspondent pas. </span>
+            <span *ngIf="invalide('nom') || invalide('prenom') || invalide('nomExploitation') || invalide('capaciteProduction')">Renseignez tous les champs marqués d’un astérisque.</span>
+          </p>
+
           <!-- Error message -->
-          <div *ngIf="errorMessage" class="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl text-red-700">
+          <div *ngIf="errorMessage" role="alert" class="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl text-red-700">
             {{ errorMessage }}
           </div>
 
@@ -171,7 +189,7 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
 
         <!-- Back link -->
         <div class="mt-8 text-center">
-          <a (click)="goToAccueil()" class="text-wine hover:text-wine-dark underline font-semibold cursor-pointer">
+          <a routerLink="/accueil" class="text-wine hover:text-wine-dark underline font-semibold cursor-pointer">
             Retour à l'accueil
           </a>
         </div>
@@ -189,6 +207,11 @@ export class InscriptionProducteurComponent {
   isLoading = false;
   errorMessage = '';
 
+  // Position GPS de l'exploitation : elle place le producteur sur la carte des éleveurs
+  position: Position | null = null;
+  positionMessage = '';
+  isLocating = false;
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -198,24 +221,42 @@ export class InscriptionProducteurComponent {
     this.inscriptionForm = this.fb.group({
       nom: ['', [Validators.required]],
       prenom: ['', [Validators.required]],
-      telephone: ['', [Validators.required]],
+      telephone: ['', [Validators.required, telephoneBurkinabe]],
       motDePasse: ['', [Validators.required, Validators.minLength(6)]],
       confirmationMotDePasse: ['', [Validators.required]],
       nomExploitation: ['', [Validators.required]],
-      capaciteProduction: ['', [Validators.required]],
+      capaciteProduction: ['', [Validators.required, Validators.min(0)]],
       province: [''],
       ville: ['']
-    });
+    }, { validators: champsIdentiques('motDePasse', 'confirmationMotDePasse') });
+  }
+
+  invalide(champ: string): boolean {
+    const control = this.inscriptionForm.get(champ);
+    return !!control && control.touched && control.invalid;
+  }
+
+  localiser(): void {
+    this.isLocating = true;
+    this.positionMessage = '';
+    obtenirPosition()
+      .then(position => {
+        this.position = position;
+        this.positionMessage = 'Position de l’exploitation enregistrée.';
+      })
+      .catch((message: string) => {
+        this.position = null;
+        this.positionMessage = message;
+      })
+      .finally(() => {
+        this.isLocating = false;
+        this.changeDetectorRef.markForCheck();
+      });
   }
 
   onSubmit(): void {
     if (this.inscriptionForm.invalid) {
-      return;
-    }
-
-    // Check password confirmation
-    if (this.inscriptionForm.value.motDePasse !== this.inscriptionForm.value.confirmationMotDePasse) {
-      this.errorMessage = 'Les mots de passe ne correspondent pas';
+      this.inscriptionForm.markAllAsTouched();
       return;
     }
 
@@ -231,23 +272,21 @@ export class InscriptionProducteurComponent {
       nomExploitation: formValue.nomExploitation,
       capaciteProduction: Number(formValue.capaciteProduction),
       ...(formValue.province ? { province: formValue.province } : {}),
-      ...(formValue.ville ? { ville: formValue.ville } : {})
+      ...(formValue.ville ? { ville: formValue.ville } : {}),
+      ...(this.position ?? {})
     };
 
     this.authService.registerProducteur(cleanedData).subscribe({
-      next: (response) => {
+      next: () => {
         this.isLoading = false;
-        this.router.navigate(['/connexion']);
+        // Le compte reste en attente tant qu'un administrateur ne l'a pas validé
+        this.router.navigate(['/connexion'], { queryParams: { inscription: 'ok' } });
       },
-      error: (error: { error?: { message?: string } }) => {
+      error: (error: unknown) => {
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Erreur lors de l\'inscription. Veuillez réessayer.';
+        this.errorMessage = messageErreur(error, 'Erreur lors de l\'inscription. Veuillez réessayer.');
         this.changeDetectorRef.markForCheck();
       }
     });
-  }
-
-  goToAccueil(): void {
-    this.router.navigate(['/accueil']);
   }
 }

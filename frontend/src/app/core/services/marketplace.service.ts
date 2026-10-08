@@ -14,6 +14,8 @@ export interface ProducteurLocalise {
   distanceKm: number;
 }
 
+export type TypeProduit = 'LARVE' | 'RESIDU_PRODUCTION';
+
 export interface Produit {
   idProduit: number;
   producteurId: number;
@@ -21,8 +23,15 @@ export interface Produit {
   nomProduit: string;
   quantiteStock: number;
   prix: number;
-  typeProduit: string;
+  typeProduit: TypeProduit;
   disponibilite: boolean;
+}
+
+export interface ProduitRequest {
+  nomProduit: string;
+  typeProduit: TypeProduit;
+  prix: number;
+  quantiteStock: number;
 }
 
 export interface ProducteurProfile {
@@ -53,6 +62,12 @@ export interface LigneCommande {
   sousTotal: number;
 }
 
+export type StatutCommande =
+  | 'EN_ATTENTE' | 'CONFIRME' | 'PAYE' | 'REFUSE'
+  | 'EXPEDIE' | 'LIVRE' | 'NON_CONFIRMEE' | 'ANNULE';
+
+export type StatutPaiement = 'EN_ATTENTE' | 'CONFIRME' | 'ECHOUE' | 'REMBOURSE';
+
 export interface Commande {
   idCommande: number;
   numeroCommande: string;
@@ -61,9 +76,24 @@ export interface Commande {
   producteurId: number;
   nomExploitation: string;
   dateCommande: string;
-  statut: string;
+  statut: StatutCommande;
   montantTotal: number;
   lignes: LigneCommande[];
+  telephoneEleveur: string | null;
+  telephoneProducteur: string | null;
+  statutPaiement: StatutPaiement | null;
+  referenceFacture: string | null;
+}
+
+/**
+ * crypto.randomUUID n'existe qu'en contexte sécurisé (HTTPS ou localhost) : sur une
+ * adresse du réseau local en HTTP, on se rabat sur un identifiant horodaté.
+ */
+function nouvelleCleIdempotence(): string {
+  const aleatoire = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  return `cmd-${aleatoire}`;
 }
 
 @Injectable({
@@ -73,6 +103,8 @@ export class MarketplaceService {
   private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
+
+  // ── Recherche et catalogue public ───────────────────────────────────────
 
   rechercherProducteursParRayon(
     latitude: number,
@@ -85,7 +117,7 @@ export class MarketplaceService {
     );
   }
 
-  listerProduits(page = 0, size = 20): Observable<ApiResponse<PageResponse<Produit>>> {
+  listerProduits(page = 0, size = 100): Observable<ApiResponse<PageResponse<Produit>>> {
     return this.http.get<ApiResponse<PageResponse<Produit>>>(
       `${this.apiUrl}/marketplace/produits`,
       { params: { page, size } }
@@ -110,22 +142,48 @@ export class MarketplaceService {
     );
   }
 
+  // ── Catalogue du producteur connecté ────────────────────────────────────
+
+  listerMesProduits(): Observable<ApiResponse<Produit[]>> {
+    return this.http.get<ApiResponse<Produit[]>>(`${this.apiUrl}/marketplace/produits/mes-produits`);
+  }
+
+  publierProduit(produit: ProduitRequest): Observable<ApiResponse<Produit>> {
+    return this.http.post<ApiResponse<Produit>>(`${this.apiUrl}/marketplace/produits`, produit);
+  }
+
+  modifierProduit(produitId: number, produit: ProduitRequest): Observable<ApiResponse<Produit>> {
+    return this.http.put<ApiResponse<Produit>>(`${this.apiUrl}/marketplace/produits/${produitId}`, produit);
+  }
+
+  retirerProduit(produitId: number): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/marketplace/produits/${produitId}`);
+  }
+
+  republierProduit(produitId: number): Observable<ApiResponse<Produit>> {
+    return this.http.post<ApiResponse<Produit>>(
+      `${this.apiUrl}/marketplace/produits/${produitId}/republier`,
+      {}
+    );
+  }
+
+  // ── Cycle de commande ───────────────────────────────────────────────────
+
   passerCommande(
-    eleveurId: number,
     produitId: number,
     quantite: number,
-    idempotencyKey = `cmd-${crypto.randomUUID()}`
+    idempotencyKey = nouvelleCleIdempotence()
   ): Observable<ApiResponse<Commande>> {
     return this.http.post<ApiResponse<Commande>>(
       `${this.apiUrl}/marketplace/commandes`,
-      { eleveurId, produitId, quantite, idempotencyKey }
+      { produitId, quantite, idempotencyKey }
     );
   }
 
   listerCommandesEleveur(
     eleveurId: number,
     page = 0,
-    size = 20
+    size = 100
   ): Observable<ApiResponse<PageResponse<Commande>>> {
     return this.http.get<ApiResponse<PageResponse<Commande>>>(
       `${this.apiUrl}/marketplace/commandes/eleveur/${eleveurId}`,
@@ -136,7 +194,7 @@ export class MarketplaceService {
   listerCommandesProducteur(
     producteurId: number,
     page = 0,
-    size = 20
+    size = 100
   ): Observable<ApiResponse<PageResponse<Commande>>> {
     return this.http.get<ApiResponse<PageResponse<Commande>>>(
       `${this.apiUrl}/marketplace/commandes/producteur/${producteurId}`,
@@ -169,6 +227,14 @@ export class MarketplaceService {
       `${this.apiUrl}/marketplace/commandes/${commandeId}/annuler`,
       {},
       { params: motif ? { motif } : {} }
+    );
+  }
+
+  /** Suivi de livraison : EXPEDIE (producteur) puis LIVRE (producteur ou éleveur). */
+  changerStatutCommande(commandeId: number, nouveauStatut: 'EXPEDIE' | 'LIVRE'): Observable<ApiResponse<Commande>> {
+    return this.http.patch<ApiResponse<Commande>>(
+      `${this.apiUrl}/marketplace/commandes/${commandeId}/statut`,
+      { nouveauStatut }
     );
   }
 }
