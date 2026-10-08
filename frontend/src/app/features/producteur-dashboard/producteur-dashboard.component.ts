@@ -4,14 +4,12 @@ import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { Commande, MarketplaceService, ProducteurProfile } from '../../core/services/marketplace.service';
 import { PaiementService } from '../../core/services/paiement.service';
-import { SidebarLayoutComponent } from '../../layouts/sidebar-layout/sidebar-layout.component';
 
 @Component({
   selector: 'app-producteur-dashboard',
   standalone: true,
-  imports: [CommonModule, SidebarLayoutComponent],
+  imports: [CommonModule],
   template: `
-    <app-sidebar-layout area="producer">
     <main class="min-h-screen bg-cream px-5 py-6 md:px-8 md:py-8">
       <div class="mx-auto max-w-7xl">
         <header class="mb-6 flex items-center gap-4 border-b border-line pb-5">
@@ -101,7 +99,6 @@ import { SidebarLayoutComponent } from '../../layouts/sidebar-layout/sidebar-lay
         </ng-container>
       </div>
     </main>
-    </app-sidebar-layout>
   `
 })
 export class ProducteurDashboardComponent implements OnInit {
@@ -120,7 +117,7 @@ export class ProducteurDashboardComponent implements OnInit {
     private marketplaceService: MarketplaceService,
     private paiementService: PaiementService,
     private changeDetectorRef: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadDashboard();
