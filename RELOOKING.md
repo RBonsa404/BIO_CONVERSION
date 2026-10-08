@@ -75,3 +75,25 @@ Pour une personne qui a deux comptes (par exemple producteur et éleveur), ajout
 ## Commit principal
 
 `feat(front): barre latérale fixe et rétractable, icônes Flaticon`
+NEW
+
+## Points à corriger
+
+Les onglets Tableau de bord, Commandes et Statistiques ouvrent la même page. Il faut une route et une page par onglet.
+
+Il n’y a pas de retour vers l’accueil depuis l’espace connecté. Il faut ajouter un lien « Accueil ».
+
+L’onglet Profil ne mène vers rien. Il faut créer une page Profil (nom, téléphone, rôle).
+
+Il n’y a pas de moyen de changer de compte. Il faut ajouter « Changer de profil » et « Se déconnecter ».
+
+Il faut vérifier la protection de la route /marketplace avec authGuard.
+
+Les photos du carrousel sont en PNG et trop lourdes. Il faut les convertir en WebP.
+
+Le numéro WhatsApp et l’e-mail du footer sont provisoires. Il faut mettre les vrais.
+
+L’accès utilisateur est affiché sur la page d’accueil. Il faut le supprimer.
+
+La page /admin affiche une double barre latérale. Il faut supprimer la barre propre à la page admin et garder uniquement celle
+d’EspaceLayoutComponent.
