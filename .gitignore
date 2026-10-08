@@ -44,3 +44,6 @@ CLAUDE.md
 .claude/
 factures/
 diff.txt
+# Données locales (profil "local" : base H2, factures, pièces jointes)
+/data/
+/uploads/

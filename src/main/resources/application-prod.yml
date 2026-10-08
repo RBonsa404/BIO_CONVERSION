@@ -1,9 +1,14 @@
+# Profil de production (Railway, Docker). La connexion PostgreSQL est lue, par ordre de
+# priorité, depuis SPRING_DATASOURCE_*, DATABASE_URL (voir DatabaseUrlEnvironmentPostProcessor)
+# ou les variables PG* / DB_*.
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:bioconversion_db}
-    username: ${DB_USER:bioconversion}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${PGHOST:${DB_HOST:localhost}}:${PGPORT:${DB_PORT:5432}}/${PGDATABASE:${DB_NAME:bioconversion_db}}
+    username: ${PGUSER:${DB_USER:bioconversion_user}}
+    password: ${PGPASSWORD:${DB_PASSWORD:}}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
 
   jpa:
     show-sql: false
@@ -13,28 +18,25 @@ logging:
     com.bioconversion: INFO
     org.springframework.security: WARN
 
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
 app:
   jwt:
-    secret: ${JWT_SECRET}
-    expiration-ms: 86400000
+    # Sans JWT_SECRET, un secret aléatoire est tiré à chaque démarrage : l'application
+    # reste sûre, mais les sessions ouvertes sont invalidées à chaque redéploiement.
+    secret: ${JWT_SECRET:${random.value}${random.value}}
   security:
+    # Le frontend est servi par le backend (même origine) : aucune origine externe requise.
     allowed-origins: ${ALLOWED_ORIGINS:}
-  upload:
-    identite-dir: ${UPLOAD_DIR}
-  commission:
-    taux: ${COMMISSION_TAUX:0.05}
   paiement:
-    webhook-secret: ${WEBHOOK_SECRET}
+    webhook-secret: ${WEBHOOK_SECRET:${random.value}${random.value}}
   iot:
-    api-key: ${IOT_API_KEY}
+    api-key: ${IOT_API_KEY:${random.value}${random.value}}
   factures:
-    dossier: ${FACTURES_DIR}
-  entreprise:
-    nom: ${ENTREPRISE_NOM:BIO CONVERSION}
-    ifu: ${ENTREPRISE_IFU}
-    rccm: ${ENTREPRISE_RCCM}
-    adresse: ${ENTREPRISE_ADRESSE}
-    telephone: ${ENTREPRISE_TELEPHONE}
-    email: ${ENTREPRISE_EMAIL}
-    banque: ${ENTREPRISE_BANQUE}
-    iban: ${ENTREPRISE_IBAN}
+    dossier: ${FACTURES_DIR:/tmp/bioconversion/factures}
+  upload:
+    identite-dir: ${UPLOAD_DIR:/tmp/bioconversion/identites}
