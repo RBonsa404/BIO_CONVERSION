@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -55,6 +56,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String telephone = tokenProvider.getTelephoneFromToken(token);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(telephone);
+                // Un jeton émis avant une suspension ou un refus ne doit plus ouvrir d'accès :
+                // la requête continue sans authentification et recevra un 401.
+                if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+                    throw new DisabledException("Compte inactif : " + telephone);
+                }
                 Long userId = tokenProvider.getUserIdFromToken(token);
                 UserDetails authenticatedUser = User.withUserDetails(userDetails)
                         .username(String.valueOf(userId))
@@ -72,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
         } catch (Exception e) {
-            log.error("Impossible de définir l'authentification depuis le JWT : {}", e.getMessage());
+            log.warn("Impossible de définir l'authentification depuis le JWT : {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
