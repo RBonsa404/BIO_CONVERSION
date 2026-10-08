@@ -1,14 +1,14 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { IsActiveMatchOptions, RouterModule } from '@angular/router';
 
-type DashboardArea = 'producer' | 'admin';
+export type DashboardArea = 'producer' | 'admin' | 'breeder';
 
 interface SidebarLink {
   label: string;
   route: string;
   fragment?: string;
-  icon: 'dashboard' | 'marketplace' | 'sensors' | 'users' | 'orders' | 'chart';
+  icon: 'dashboard' | 'marketplace' | 'sensors' | 'users' | 'orders' | 'chart' | 'history';
 }
 
 @Component({
@@ -17,21 +17,42 @@ interface SidebarLink {
   imports: [CommonModule, RouterModule],
   template: `
     <div class="min-h-screen bg-cream md:flex">
-      <aside class="relative flex flex-col overflow-hidden bg-wine-dark text-white md:min-h-screen md:w-72 md:shrink-0">
-        <div class="flex flex-col items-center gap-2 border-b border-white/15 px-5 py-7">
-          <span class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/60 bg-white">
+      <aside class="relative flex flex-col overflow-hidden bg-wine-dark text-white transition-[width] duration-300 md:sticky md:top-0 md:h-screen md:shrink-0 md:self-start"
+             [ngClass]="collapsed ? 'md:w-20' : 'md:w-72'">
+        <div class="flex flex-col items-center gap-2 border-b border-white/15 px-5 py-7"
+             [ngClass]="collapsed ? 'md:px-2 md:py-5' : ''">
+          <span class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/60 bg-white transition-all duration-300"
+                [ngClass]="collapsed ? 'md:h-12 md:w-12' : ''">
             <img src="/logo.png" alt="" class="h-full w-full object-contain">
           </span>
-          <span class="font-serif text-3xl font-bold">BioConversion</span>
+          <span class="font-serif text-3xl font-bold" [ngClass]="collapsed ? 'md:hidden' : ''">BioConversion</span>
         </div>
 
-        <nav aria-label="Navigation principale" class="relative z-10 flex gap-2 overflow-x-auto p-3 md:block md:space-y-3 md:p-4">
+        <!-- Bouton rétracter (ordinateur uniquement) -->
+        <div class="hidden px-4 pt-3 md:flex" [ngClass]="collapsed ? 'md:justify-center' : 'md:justify-end'">
+          <button type="button" (click)="toggle()"
+                  class="grid h-9 w-9 place-items-center rounded-lg text-white/75 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                  [attr.aria-expanded]="!collapsed"
+                  [attr.aria-label]="collapsed ? 'Déployer le menu' : 'Réduire le menu'"
+                  [title]="collapsed ? 'Déployer le menu' : 'Réduire le menu'">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 transition-transform duration-300" [class.rotate-180]="collapsed"
+                 fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m15 6-6 6 6 6" />
+            </svg>
+          </button>
+        </div>
+
+        <nav aria-label="Navigation principale" class="relative z-10 flex gap-2 overflow-x-auto p-3 md:block md:space-y-3 md:overflow-x-hidden md:p-4"
+             [ngClass]="collapsed ? 'md:px-2' : ''">
           <a *ngFor="let link of links"
              [routerLink]="link.route"
              [fragment]="link.fragment"
              routerLinkActive="bg-white/15 text-white"
-             [routerLinkActiveOptions]="{ exact: true }"
-             class="flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white">
+             [routerLinkActiveOptions]="activeOptions"
+             [title]="collapsed ? link.label : ''"
+             [attr.aria-label]="link.label"
+             class="flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white"
+             [ngClass]="collapsed ? 'md:justify-center md:px-0' : ''">
             <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor"
                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <ng-container [ngSwitch]="link.icon">
@@ -61,17 +82,22 @@ interface SidebarLink {
                   <circle cx="10" cy="7" r="4" />
                   <path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                 </ng-container>
+                <ng-container *ngSwitchCase="'history'">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </ng-container>
               </ng-container>
             </svg>
-            <span>{{ link.label }}</span>
+            <span [ngClass]="collapsed ? 'md:hidden' : ''">{{ link.label }}</span>
           </a>
         </nav>
 
-        <div class="relative z-10 mt-auto hidden border-t border-white/20 px-6 py-6 md:block">
+        <div *ngIf="!collapsed" class="relative z-10 mt-auto hidden border-t border-white/20 px-6 py-6 md:block">
           <p class="text-sm text-white/65">Connecté en tant que</p>
-          <p class="mt-1 font-semibold">{{ area === 'admin' ? 'Administrateur' : 'Producteur' }}</p>
+          <p class="mt-1 font-semibold">{{ roleLabel }}</p>
         </div>
-        <svg class="pointer-events-none absolute -bottom-4 -left-5 h-56 w-40 text-green/80 opacity-80" viewBox="0 0 120 180" fill="none" aria-hidden="true">
+        <svg class="pointer-events-none absolute -bottom-4 -left-5 h-56 w-40 text-green/80 opacity-80"
+             [ngClass]="collapsed ? 'md:hidden' : ''" viewBox="0 0 120 180" fill="none" aria-hidden="true">
           <path d="M8 170C38 126 48 83 83 25" stroke="currentColor" stroke-width="2"/>
           <path d="M38 125C4 124 4 96 10 78c24 3 38 19 28 47Zm17-31c-9-29 10-45 29-51 8 23-3 42-29 51Zm7 46c-1-26 19-36 40-36 2 24-13 38-40 36ZM25 151c-19-16-15-37-3-52 20 10 24 28 3 52Z" fill="currentColor" opacity=".7"/>
         </svg>
@@ -84,12 +110,20 @@ interface SidebarLink {
   `
 })
 export class SidebarLayoutComponent {
+  private static readonly storageKey = 'bioconversion.sidebar.collapsed';
+
   private static readonly producerLinks: SidebarLink[] = [
     { label: 'Tableau de bord', route: '/dashboard/producteur', icon: 'dashboard' },
     { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' },
     { label: 'Commandes', route: '/dashboard/producteur', fragment: 'commandes', icon: 'orders' },
     { label: 'Capteurs IoT', route: '/iot', icon: 'sensors' },
     { label: 'Statistiques', route: '/dashboard/producteur', fragment: 'stats', icon: 'chart' }
+  ];
+
+  private static readonly breederLinks: SidebarLink[] = [
+    { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' },
+    { label: 'Mes commandes', route: '/mes-commandes', icon: 'orders' },
+    { label: 'Historique', route: '/historique', icon: 'history' }
   ];
 
   private static readonly adminLinks: SidebarLink[] = [
@@ -99,9 +133,45 @@ export class SidebarLayoutComponent {
 
   @Input() area: DashboardArea = 'producer';
 
+  /* Le fragment (#commandes, #stats) compte pour le surlignage du lien actif */
+  readonly activeOptions: IsActiveMatchOptions = {
+    paths: 'exact',
+    queryParams: 'exact',
+    fragment: 'exact',
+    matrixParams: 'ignored'
+  };
+
+  /* État rétracté, mémorisé entre les pages et les rechargements */
+  collapsed = this.readStoredState();
+
   get links(): SidebarLink[] {
-    return this.area === 'admin'
-      ? SidebarLayoutComponent.adminLinks
-      : SidebarLayoutComponent.producerLinks;
+    switch (this.area) {
+      case 'admin': return SidebarLayoutComponent.adminLinks;
+      case 'breeder': return SidebarLayoutComponent.breederLinks;
+      default: return SidebarLayoutComponent.producerLinks;
+    }
+  }
+
+  get roleLabel(): string {
+    switch (this.area) {
+      case 'admin': return 'Administrateur';
+      case 'breeder': return 'Éleveur';
+      default: return 'Producteur';
+    }
+  }
+
+  toggle(): void {
+    this.collapsed = !this.collapsed;
+    try {
+      localStorage.setItem(SidebarLayoutComponent.storageKey, String(this.collapsed));
+    } catch { /* stockage indisponible : on ignore */ }
+  }
+
+  private readStoredState(): boolean {
+    try {
+      return localStorage.getItem(SidebarLayoutComponent.storageKey) === 'true';
+    } catch {
+      return false;
+    }
   }
 }
