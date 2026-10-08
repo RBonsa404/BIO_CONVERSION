@@ -1,51 +1,42 @@
-# BioConversion Frontend
+# BioConversion — Frontend
 
-Frontend Angular pour la plateforme BioConversion (Dunord Smart) - plateforme agri-tech de vente de larves BSFL entre producteurs et éleveurs au Burkina Faso.
+Application Angular de la plateforme BioConversion : accueil, inscription et connexion, puis un
+espace par rôle (producteur, éleveur, administrateur) derrière une barre latérale commune.
 
-## Prérequis
+Le lancement de la plateforme complète est décrit dans le [README principal](../README.md).
 
-- Node.js 18+ et npm
-- Angular CLI (installé via npm ou global)
+## Développement
 
-## Installation
+Prérequis : Node.js 22+ et le backend démarré sur `localhost:8080`.
 
 ```bash
 npm install
 ```
 
-## Configuration de l'API
-
-L'URL de l'API backend est configurée dans les fichiers d'environnement :
-
-- `src/environments/environment.ts` : Développement
-- `src/environments/environment.prod.ts` : Production
-
-Par défaut, l'URL de développement est `http://localhost:8080/api/v1`.
-
-Pour modifier l'URL de l'API, éditez le fichier correspondant :
-
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8080/api/v1'
-};
-```
-
-## Lancer le serveur de développement
-
 ```bash
 npm start
 ```
 
-L'application sera accessible sur `http://localhost:4200`.
+L'application est servie sur <http://localhost:4200>.
 
-## Build pour la production
+## Connexion au backend
+
+Le frontend appelle toujours l'URL relative `/api/v1` (`src/environments/`) :
+
+* en développement, `ng serve` relaie `/api` vers `http://localhost:8080` (`proxy.conf.json`) ;
+* en production, le backend sert lui-même le frontend compilé, sur le même domaine.
+
+Il n'y a donc aucune adresse de serveur à configurer, quels que soient la machine ou le domaine.
+Pour pointer le serveur de développement vers un autre backend, modifier `target` dans `proxy.conf.json`.
+
+## Build
 
 ```bash
 npm run build
 ```
 
-Les fichiers compilés seront générés dans le dossier `dist/frontend`.
+Le résultat est écrit dans `dist/frontend/browser`. Le backend le sert directement depuis ce
+dossier en local, et l'embarque dans son jar lors du build Docker.
 
 ## Tests
 
@@ -53,103 +44,72 @@ Les fichiers compilés seront générés dans le dossier `dist/frontend`.
 npm test
 ```
 
+## Pages et API utilisées
+
+Chaque page correspond à une route et s'appuie sur des endpoints existants du backend.
+
+| Route | Rôle | Page | Endpoints |
+|---|---|---|---|
+| `/accueil` | public | Présentation, choix du profil | — |
+| `/connexion` | public | Connexion | `POST /auth/login` |
+| `/inscription/producteur`, `/inscription/eleveur` | public | Inscription | `POST /auth/register/*` |
+| `/dashboard/producteur` | producteur | Tableau de bord, commandes à valider | commandes, solde, produits, capteurs |
+| `/dashboard/commandes` | producteur | Validation, expédition, livraison, factures | `/marketplace/commandes/*`, `/factures/*` |
+| `/dashboard/produits` | producteur | Catalogue : publier, modifier, retirer | `/marketplace/produits/*` |
+| `/dashboard/statistiques` | producteur | Ventes et répartition des commandes | commandes, solde |
+| `/iot` | producteur | Capteurs, mesures, alertes | `/iot/capteurs`, `/iot/alertes` |
+| `/marketplace` | connecté | Recherche par rayon, catalogue | `/marketplace/produits`, recherche géolocalisée |
+| `/producteur/:id` | connecté | Fiche et catalogue d'un producteur | `/producteurs/{id}`, catalogue |
+| `/commande` | éleveur | Passer commande | `POST /marketplace/commandes` |
+| `/confirmation` | éleveur | Commande envoyée | `GET /marketplace/commandes/{id}` |
+| `/mes-commandes` | éleveur | Suivi, paiement, réception, facture | commandes, `/paiements/*`, `/factures/*` |
+| `/historique` | éleveur | Commandes terminées, factures | commandes, `/factures/*` |
+| `/admin` | administrateur | Indicateurs, comptes à valider | `/admin/statistiques`, `/admin/utilisateurs` |
+| `/admin/utilisateurs` | administrateur | Tous les comptes : valider, suspendre | `/admin/utilisateurs/*` |
+| `/profil` | connecté | Informations, mot de passe, session | `/auth/me` |
+
+Les routes de l'espace connecté sont protégées par `authGuard` et par un garde de rôle
+(`core/guards`) : un visiteur est renvoyé vers la connexion, un utilisateur d'un autre rôle vers
+son propre espace. Le backend applique les mêmes règles ; une session expirée (401) ramène à la connexion.
+
+## Structure
+
+```
+src/app/
+├── core/
+│   ├── guards/      authGuard, guestGuard, gardes de rôle
+│   ├── models/      Types de l'authentification et des inscriptions
+│   ├── services/    AuthService, MarketplaceService, PaiementService, IotService, AdminService, intercepteur JWT
+│   └── utils/       Libellés de statuts, messages d'erreur, validateurs
+├── layouts/         EspaceLayout (page connectée) et barre latérale
+├── features/        Une page par dossier (auth, marketplace, commande, producteur-*, iot, admin, profil)
+└── shared/          Composants réutilisables (badge, carte, en-tête de page)
+public/              Logo, photos du carrousel (WebP), icônes
+```
+
+## Design
+
+Couleurs (`tailwind.config.js`) : `wine` #64102f (marque), `wine-dark` #3f0820 (barre latérale),
+`green` #4e7d3f (accents, validation), `green-soft` #e8f0df, `cream` #f7f4ea (fond),
+`text` #3f4a57, `line` #ddd9cd.
+
+Typographie : Georgia pour les titres, Inter pour le texte, Caveat pour les accroches.
+
+Icônes : Flaticon UIcons (crédit dans `src/assets/icons/README.md` et dans le pied de page de l'accueil).
+
+## Coordonnées du pied de page
+
+L'adresse e-mail et le numéro WhatsApp de l'accueil se règlent dans
+`features/auth/accueil/accueil.component.ts` (`contact`). Le bouton WhatsApp n'apparaît que si un
+numéro est renseigné.
+
 ## Sécurité de l'authentification
 
-Le token JWT est actuellement conservé dans `localStorage`. Ce choix facilite
-l'authentification côté client, mais rend le token accessible à tout script
-exécuté dans l'origine de l'application, notamment en cas de faille XSS. Ce
-risque est accepté pour la version actuelle; toute évolution des exigences de
-sécurité devrait privilégier une migration vers un cookie `httpOnly`, posé et
-renouvelé par le backend.
+Le jeton JWT est conservé dans `localStorage`. Ce choix facilite l'authentification côté client,
+mais rend le jeton accessible à tout script exécuté dans l'origine de l'application, notamment en
+cas de faille XSS. Ce risque est accepté pour la version actuelle ; une évolution devrait
+privilégier un cookie `httpOnly` posé et renouvelé par le backend.
 
-## Comptes de test en local
+## Stack
 
-Avec le backend démarré en profil Spring `dev`, ces comptes permettent de
-parcourir les principaux rôles de l'application. La base de données PostgreSQL
-locale doit être disponible; consultez le README backend pour son lancement.
-
-| Profil | Téléphone | Mot de passe | Statut initial |
-|---|---|---|---|
-| Producteur validé | `+226 70 00 00 01` | `TestPass123!` | ACTIF |
-| Producteur en attente | `+226 70 00 00 02` | `TestPass123!` | EN_ATTENTE_VALIDATION |
-| Éleveur pisciculteur | `+226 70 00 00 03` | `TestPass123!` | ACTIF |
-| Éleveur aviculteur | `+226 70 00 00 04` | `TestPass123!` | ACTIF |
-| Administrateur | `+226 70 00 00 05` | `TestPass123!` | ACTIF |
-
-Ces comptes et leurs produits sont créés idempotemment uniquement au démarrage
-du backend avec le profil `dev`. Ils sont réservés au développement local et
-ne doivent jamais être activés en production.
-
-## Structure du projet
-
-```
-src/
-├── app/
-│   ├── core/              # Services, guards, models (cœur de l'application)
-│   │   ├── services/      # AuthService, HttpTokenInterceptor, etc.
-│   │   ├── guards/        # authGuard, roleGuard
-│   │   └── models/        # Interfaces TypeScript (Utilisateur, Produit, Commande, etc.)
-│   ├── shared/            # Composants réutilisables
-│   │   └── components/    # ui-button, ui-card, ui-badge, ui-icon-circle
-│   ├── features/          # Écrans fonctionnels
-│   │   ├── auth/          # Accueil, connexion, inscription
-│   │   ├── producteur-dashboard/
-│   │   ├── marketplace/
-│   │   ├── commande/
-│   │   ├── iot/
-│   │   └── admin/
-│   ├── app.config.ts      # Configuration Angular (routing, providers)
-│   ├── app.routes.ts      # Routes de l'application
-│   └── app.html           # Template racine
-├── environments/          # Configuration par environnement
-└── styles.scss            # Styles globaux
-```
-
-## Design System
-
-### Couleurs
-
-- `wine` (#64102f) : Couleur de marque principale
-- `wine-dark` (#3f0820) : Sidebar, dégradés foncés
-- `green` (#4e7d3f) : Accents, liens, boutons de validation
-- `green-soft` (#e8f0df) : Fond des badges/pastilles
-- `cream` (#f7f4ea) : Fond général de l'application
-- `text` (#3f4a57) : Texte principal
-- `line` (#ddd9cd) : Bordures, séparateurs
-
-### Typographie
-
-- Titres : Georgia, Times New Roman (serif)
-- Corps de texte : Inter, Arial, Helvetica (sans-serif)
-- Accroches manuscrites : Caveat (script)
-
-## Écrans implémentés
-
-1. **Accueil / Choix du profil** - Sélection Producteur/Éleveur
-2. **Connexion** - Formulaire de connexion (téléphone + mot de passe)
-3. **Inscription Producteur** - Formulaire d'inscription (à compléter)
-4. **Inscription Éleveur** - Formulaire d'inscription (à compléter)
-5. **Dashboard Producteur** - Vue connectée Producteur (à compléter)
-6. **Marketplace** - Recherche de producteurs (à compléter)
-7. **Fiche catalogue producteur** - Détail produits d'un producteur (à compléter)
-8. **Commande et paiement** - Processus de commande (à compléter)
-9. **Confirmation de commande** - Écran de confirmation (à compléter)
-10. **Module IoT** - Écran verrouillé (non fonctionnel par défaut)
-11. **Dashboard Administrateur** - Vue connectée Admin (à compléter)
-
-## Écarts Backend
-
-Certains éléments de la maquette ne sont pas encore supportés par l'API backend. Voir le fichier `FRONTEND-GAPS.md` pour la liste détaillée des écarts et les actions requises côté backend.
-
-## Stack technique
-
-- Angular 19
-- TypeScript
-- Tailwind CSS 3.4
-- SCSS
-- RxJS
-- Standalone components (pas de NgModule)
-
-## Auteurs
-
-Développé pour ODC Groupe 3.
+Angular 22 (composants autonomes, signaux), TypeScript, Tailwind CSS 3.4, SCSS, RxJS, Vitest.
