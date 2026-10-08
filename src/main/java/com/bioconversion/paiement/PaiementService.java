@@ -3,46 +3,29 @@ package com.bioconversion.paiement;
 import java.math.BigDecimal;
 
 /**
- * Service métier du Module C — Paiement Intégré (Orange Money).
+ * Contrat du service métier Module C — Paiement Intégré (Orange Money).
+ * C-MUST-1 à C-MUST-4 du CDC v1.1.
  */
 public interface PaiementService {
 
-    /**
-     * C-MUST-1 : initie le paiement d'une commande auprès de l'opérateur choisi.
-     * Le montant est calculé à partir de Commande.calculerMontantTotal() (point de vigilance
-     * diagramme de classes : pas de saisie libre du montant).
-     *
-     * @param idCommande identifiant de la commande à payer
-     * @param operateur  nom de l'opérateur mobile money choisi (ex. "Orange Money")
-     * @return le Paiement créé, en statut EN_ATTENTE
-     */
     Paiement initierPaiement(Long idCommande, String operateur);
 
+    /**
+     * Initie le règlement d'une commande confirmée par le producteur. Reprend un
+     * paiement en attente et relance un paiement échoué plutôt que d'en créer un second.
+     */
     Paiement initierPaiement(Long idCommande, String operateur, Long currentUserId);
 
-    /**
-     * C-MUST-2 / C-MUST-3 : traite la confirmation asynchrone reçue via webhook opérateur.
-     * Idempotent : un paiement déjà CONFIRME n'est pas re-traité.
-     *
-     * @param referenceTransaction référence de transaction (générée à l'initiation, échoée par
-     *                             l'opérateur dans le webhook)
-     * @return le Paiement mis à jour en statut CONFIRME
-     */
     Paiement traiterWebhookSucces(String referenceTransaction);
 
-    /**
-     * Cas limite CDC 2.3.2 : échec ou expiration de la transaction côté opérateur.
-     * Ne DOIT PAS confirmer la commande.
-     *
-     * @param referenceTransaction référence de transaction concernée
-     * @return le Paiement mis à jour en statut ECHOUE
-     */
     Paiement traiterWebhookEchec(String referenceTransaction);
 
     /**
-     * C-MUST-4 : consultation du paiement d'une commande, nécessaire pour vérifier que le
-     * paiement est confirmé avant tout retrait.
+     * Tient lieu de réponse de l'opérateur tant que l'agrégateur n'est pas branché
+     * ({@code app.paiement.simulation}). Applique exactement le traitement du webhook.
      */
+    Paiement confirmerParSimulation(Long idCommande, boolean succes, Long currentUserId);
+
     Paiement consulterParCommande(Long idCommande);
 
     Paiement consulterParCommande(Long idCommande, Long currentUserId);

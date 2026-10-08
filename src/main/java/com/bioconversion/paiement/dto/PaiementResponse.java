@@ -13,7 +13,8 @@ public record PaiementResponse(
         String operateur,
         String referenceTransaction,
         OffsetDateTime datePaiement,
-        StatutPaiement statutPaiement
+        StatutPaiement statutPaiement,
+        String referenceFacture
 ) {
     public static PaiementResponse from(Paiement paiement) {
         return new PaiementResponse(
@@ -23,7 +24,8 @@ public record PaiementResponse(
                 paiement.getOperateur(),
                 paiement.getReferenceTransaction(),
                 paiement.getDatePaiement(),
-                paiement.getStatutPaiement()
+                paiement.getStatutPaiement(),
+                paiement.getFacture() != null ? paiement.getFacture().getReference() : null
         );
     }
 }

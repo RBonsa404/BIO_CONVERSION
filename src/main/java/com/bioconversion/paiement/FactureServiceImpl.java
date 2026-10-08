@@ -10,6 +10,7 @@ import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileOutputStream;
@@ -37,6 +38,7 @@ import com.lowagie.text.*;
 public class FactureServiceImpl implements FactureService {
 
     private final FactureRepository factureRepository;
+    private final PaiementRepository paiementRepository;
     private final AppProperties appProperties;
 
     @Override
@@ -281,6 +283,15 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Facture genererPourPaiementConfirme(Long paiementId) {
+        Paiement paiement = paiementRepository.findById(paiementId)
+                .orElseThrow(() -> new ResourceNotFoundException("Paiement introuvable : " + paiementId));
+        return genererPourPaiement(paiement);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Facture consulterParReference(String reference) {
         return factureRepository.findByReference(reference)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -288,12 +299,13 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Facture consulterParReference(String reference, Long currentUserId) {
         Facture facture = factureRepository.findByReference(reference)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Aucune facture pour la référence " + reference));
 
-        if (!facture.getPaiement().getCommande().getEleveur().getIdUtilisateur().equals(currentUserId) 
+        if (!facture.getPaiement().getCommande().getEleveur().getIdUtilisateur().equals(currentUserId)
                 && !facture.getPaiement().getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
             throw new com.bioconversion.common.exception.ForbiddenException(
                     "Vous n'êtes pas autorisé à consulter cette facture");
@@ -303,36 +315,57 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
     }
 
     @Override
+    @Transactional
     public byte[] telechargerPdf(String reference) {
-        Facture facture = consulterParReference(reference);
-
-        if (facture.getCheminPdf() == null) {
-            throw new BusinessException(
-                    "Le PDF de la facture " + reference + " n'a pas encore été généré");
-        }
-
-        try {
-            return Files.readAllBytes(Path.of(facture.getCheminPdf()));
-        } catch (IOException e) {
-            throw new UncheckedIOException(
-                    "Impossible de lire le PDF de la facture " + reference, e);
-        }
+        return lirePdf(consulterParReference(reference));
     }
 
     @Override
+    @Transactional
     public byte[] telechargerPdf(String reference, Long currentUserId) {
-        Facture facture = consulterParReference(reference, currentUserId);
+        return lirePdf(consulterParReference(reference, currentUserId));
+    }
 
-        if (facture.getCheminPdf() == null) {
-            throw new BusinessException(
-                    "Le PDF de la facture " + reference + " n'a pas encore été généré");
+    @Override
+    @Transactional
+    public Facture obtenirPourCommande(Long idCommande, Long currentUserId) {
+        Paiement paiement = paiementRepository.findByCommandeIdCommande(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun paiement pour la commande " + idCommande));
+
+        if (!paiement.getCommande().getEleveur().getIdUtilisateur().equals(currentUserId)
+                && !paiement.getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException(
+                    "Vous n'êtes pas autorisé à consulter cette facture");
         }
 
+        // Une facture déjà émise reste consultable même si le paiement a été remboursé depuis
+        return factureRepository.findByPaiementIdPaiement(paiement.getIdPaiement())
+                .orElseGet(() -> creerEtGenererFacture(paiement));
+    }
+
+    @Override
+    @Transactional
+    public byte[] telechargerPdfPourCommande(Long idCommande, Long currentUserId) {
+        return lirePdf(obtenirPourCommande(idCommande, currentUserId));
+    }
+
+    /**
+     * Le fichier PDF n'est qu'un cache : sur un hébergement à disque éphémère il
+     * disparaît à chaque redéploiement, il est alors reconstruit depuis la base.
+     */
+    private byte[] lirePdf(Facture facture) {
         try {
+            if (facture.getCheminPdf() == null || !Files.exists(Path.of(facture.getCheminPdf()))) {
+                double tauxCommission = appProperties.commission().taux();
+                BigDecimal montantCommission = facture.getMontant().multiply(BigDecimal.valueOf(tauxCommission));
+                facture.setCheminPdf(genererPdf(facture, montantCommission, tauxCommission));
+                factureRepository.save(facture);
+            }
             return Files.readAllBytes(Path.of(facture.getCheminPdf()));
         } catch (IOException e) {
             throw new UncheckedIOException(
-                    "Impossible de lire le PDF de la facture " + reference, e);
+                    "Impossible de lire le PDF de la facture " + facture.getReference(), e);
         }
     }
 
