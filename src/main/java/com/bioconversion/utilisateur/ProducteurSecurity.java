@@ -4,14 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-/**
- * Vérifie qu'un producteur n'agit que sur sa propre fiche.
- *
- * <p>
- * Depuis la mise à jour du filtre JWT, le « nom » de l'utilisateur connecté
- * ({@code authentication.getName()}) est son identifiant, et non plus son téléphone.
- * </p>
- */
 @Component("producteurSecurity")
 @RequiredArgsConstructor
 public class ProducteurSecurity {
