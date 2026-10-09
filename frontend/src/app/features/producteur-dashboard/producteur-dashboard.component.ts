@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { Capteur, IotService } from '../../core/services/iot.service';
-import { Commande, MarketplaceService, Produit } from '../../core/services/marketplace.service';
+import { Commande, MarketplaceService, ProducteurProfile, Produit } from '../../core/services/marketplace.service';
 import { PaiementService } from '../../core/services/paiement.service';
 import { messageErreur } from '../../core/utils/http-error';
 import { PageHeaderComponent } from '../../shared/components';
@@ -69,6 +69,31 @@ import { PageHeaderComponent } from '../../shared/components';
             </a>
           </section>
 
+          @if (fiche(); as f) {
+            <section class="mb-8 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-line bg-white p-5 shadow-sm md:p-6"
+                     aria-label="Ma fiche producteur">
+              <div>
+                <p class="mb-1 text-sm text-text">Capacité de production déclarée</p>
+                <p class="font-serif text-3xl font-bold text-wine">{{ f.capaciteProduction | number:'1.0-0' }} <small class="text-base">kg/mois</small></p>
+                <p class="mt-1 text-sm text-text">
+                  @if (f.capaciteDerniereMaj) {
+                    Mise à jour le {{ f.capaciteDerniereMaj | date:'d MMMM y à HH:mm' }}
+                  } @else {
+                    Jamais mise à jour depuis l'inscription
+                  }
+                </p>
+              </div>
+              <div>
+                <p class="mb-1 text-sm text-text">Consultations de votre fiche</p>
+                <p class="font-serif text-3xl font-bold text-wine">{{ f.nombreConsultations }}</p>
+                <p class="mt-1 text-sm text-text">par les éleveurs</p>
+              </div>
+              <a routerLink="/profil" class="rounded-lg border border-green px-4 py-2 font-semibold text-green hover:bg-green-soft">
+                Modifier ma capacité
+              </a>
+            </section>
+          }
+
           <section class="rounded-2xl border border-line bg-white p-5 shadow-sm md:p-6">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
               <h2 class="font-serif text-2xl font-semibold text-wine">Commandes en attente de validation</h2>
@@ -111,6 +136,8 @@ export class ProducteurDashboardComponent implements OnInit {
   readonly commandes = signal<Commande[]>([]);
   readonly produits = signal<Produit[]>([]);
   readonly capteurs = signal<Capteur[]>([]);
+  /** Fiche du producteur : capacité, date de sa dernière mise à jour (D-MUST-3) et consultations (D-SHOULD-1) */
+  readonly fiche = signal<ProducteurProfile | null>(null);
   readonly totalPaiementsConfirmes = signal(0);
   readonly isLoading = signal(false);
   readonly loaded = signal(false);
@@ -150,13 +177,17 @@ export class ProducteurDashboardComponent implements OnInit {
       paiements: this.paiementService.totalPaiementsConfirmes(user.idUtilisateur),
       produits: this.marketplaceService.listerMesProduits(),
       // Les capteurs sont un complément : leur indisponibilité ne bloque pas le tableau de bord
-      capteurs: this.iotService.listerCapteurs().pipe(catchError(() => of({ data: [] as Capteur[] })))
+      capteurs: this.iotService.listerCapteurs().pipe(catchError(() => of({ data: [] as Capteur[] }))),
+      // La fiche est aussi un complément : son indisponibilité ne bloque pas le tableau de bord
+      fiche: this.marketplaceService.obtenirProducteur(user.idUtilisateur)
+        .pipe(catchError(() => of({ data: null as ProducteurProfile | null })))
     }).subscribe({
       next: result => {
         this.commandes.set(result.commandes.data.content);
         this.totalPaiementsConfirmes.set(result.paiements.data);
         this.produits.set(result.produits.data);
         this.capteurs.set(result.capteurs.data);
+        this.fiche.set(result.fiche.data);
         this.loaded.set(true);
         this.isLoading.set(false);
       },

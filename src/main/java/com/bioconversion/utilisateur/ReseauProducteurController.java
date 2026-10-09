@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class ReseauProducteurController {
 
     private final ReseauProducteurService reseauProducteurService;
+    private final ProducteurSecurity producteurSecurity;
 
     @GetMapping("/en-attente")
     @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'SUPER_ADMINISTRATEUR')")
@@ -37,10 +39,18 @@ public class ReseauProducteurController {
         return ResponseEntity.ok(ApiResponse.success(producteurs));
     }
 
-    /** D-SHOULD-1 : consulter la fiche d'un producteur incrémente son compteur de consultations. */
+    /**
+     * D-SHOULD-1 : consulter la fiche d'un producteur incrémente son compteur de consultations,
+     * sauf quand c'est le producteur lui-même qui consulte sa propre fiche.
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProducteurResponse>> consulterProducteur(@PathVariable Long id) {
-        Producteur producteur = reseauProducteurService.consulterProducteur(id);
+    public ResponseEntity<ApiResponse<ProducteurResponse>> consulterProducteur(
+            @PathVariable Long id,
+            Authentication authentication) {
+        boolean estSaPropreFiche = authentication != null && producteurSecurity.estProprietaire(id, authentication);
+        Producteur producteur = estSaPropreFiche
+                ? reseauProducteurService.trouverProducteur(id)
+                : reseauProducteurService.consulterProducteur(id);
         return ResponseEntity.ok(ApiResponse.success(ProducteurResponse.from(producteur)));
     }
 
