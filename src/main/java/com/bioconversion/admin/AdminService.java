@@ -19,21 +19,29 @@ import com.bioconversion.utilisateur.dto.UtilisateurResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.security.SecureRandom;
 import java.util.EnumMap;
 import java.util.Map;
 
 /**
  * Administration de la plateforme : validation des inscriptions (producteurs et
- * éleveurs, CDC §2.2.3), suspension des comptes et indicateurs globaux.
+ * éleveurs, CDC §2.2.3), suspension des comptes, réinitialisation des mots de passe
+ * et indicateurs globaux.
  */
 @Service
 @RequiredArgsConstructor
 public class AdminService {
+
+    /** Caractères du mot de passe temporaire, sans ceux qu'on confond à l'oral (0/O, 1/l/I). */
+    private static final String CARACTERES_MOT_DE_PASSE = "abcdefghjkmnpqrstuvwxyz23456789";
+    private static final int LONGUEUR_MOT_DE_PASSE = 8;
+    private static final SecureRandom ALEATOIRE = new SecureRandom();
 
     private final UtilisateurRepository utilisateurRepository;
     private final ProducteurRepository producteurRepository;
@@ -42,6 +50,7 @@ public class AdminService {
     private final CommandeRepository commandeRepository;
     private final PaiementRepository paiementRepository;
     private final AppProperties appProperties;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public Page<UtilisateurResponse> listerUtilisateurs(StatutUtilisateur statut, Pageable pageable) {
@@ -82,6 +91,20 @@ public class AdminService {
         return UtilisateurResponse.from(utilisateurRepository.save(utilisateur));
     }
 
+    /**
+     * Mot de passe oublié (sans SMS) : l'administrateur génère un mot de passe temporaire,
+     * le transmet à l'utilisateur par téléphone, et l'utilisateur le change ensuite dans son profil.
+     * Seul le hash est enregistré ; le mot de passe en clair n'est renvoyé qu'une fois, à l'admin.
+     */
+    @Transactional
+    public String reinitialiserMotDePasse(Long utilisateurId) {
+        Utilisateur utilisateur = trouverCompteGerable(utilisateurId);
+        String motDePasseTemporaire = genererMotDePasseTemporaire();
+        utilisateur.setMotDePasse(passwordEncoder.encode(motDePasseTemporaire));
+        utilisateurRepository.save(utilisateur);
+        return motDePasseTemporaire;
+    }
+
     @Transactional(readOnly = true)
     public StatistiquesPlateformeResponse statistiques() {
         Map<StatutCommande, Long> commandesParStatut = new EnumMap<>(StatutCommande.class);
@@ -102,6 +125,14 @@ public class AdminService {
                 volume,
                 taux,
                 commission);
+    }
+
+    private String genererMotDePasseTemporaire() {
+        StringBuilder motDePasse = new StringBuilder(LONGUEUR_MOT_DE_PASSE);
+        for (int i = 0; i < LONGUEUR_MOT_DE_PASSE; i++) {
+            motDePasse.append(CARACTERES_MOT_DE_PASSE.charAt(ALEATOIRE.nextInt(CARACTERES_MOT_DE_PASSE.length())));
+        }
+        return motDePasse.toString();
     }
 
     /** Les comptes administrateurs ne se gèrent pas depuis l'interface (pas d'auto-blocage). */

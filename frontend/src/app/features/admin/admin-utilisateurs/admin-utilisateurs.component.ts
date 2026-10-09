@@ -43,6 +43,19 @@ type Action = 'valider' | 'refuser' | 'suspendre' | 'reactiver';
         @if (actionMessage()) {
           <div role="status" class="mb-5 rounded-xl bg-green-soft p-4 text-green">{{ actionMessage() }}</div>
         }
+        @if (motDePasseTemporaire(); as mdp) {
+          <div role="status" class="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
+            <p>
+              Nouveau mot de passe temporaire de <strong>{{ mdp.nom }}</strong> ({{ mdp.telephone }}) :
+              <strong class="ml-1 rounded bg-white px-2 py-1 font-mono text-lg tracking-wider text-wine">{{ mdp.valeur }}</strong>
+            </p>
+            <p class="mt-2 text-sm">
+              Transmettez-le à l’utilisateur par téléphone. Il pourra le changer dans « Mon profil » après connexion.
+              Ce mot de passe ne sera plus affiché après fermeture.
+            </p>
+            <button type="button" (click)="motDePasseTemporaire.set(null)" class="mt-2 text-sm font-semibold underline">Fermer</button>
+          </div>
+        }
 
         @if (!isLoading() && !errorMessage()) {
           @if (utilisateursFiltres().length === 0) {
@@ -89,6 +102,8 @@ type Action = 'valider' | 'refuser' | 'suspendre' | 'reactiver';
                                         class="rounded-lg bg-green px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Valider</button>
                               }
                               @case ('ACTIF') {
+                                <button type="button" (click)="reinitialiserMotDePasse(utilisateur)" [disabled]="processingId() === utilisateur.id"
+                                        class="rounded-lg border border-green px-3 py-2 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">Réinitialiser le mot de passe</button>
                                 <button type="button" (click)="agir(utilisateur, 'suspendre')" [disabled]="processingId() === utilisateur.id"
                                         class="rounded-lg border border-wine px-3 py-2 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">Suspendre</button>
                               }
@@ -128,6 +143,8 @@ export class AdminUtilisateursComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly actionMessage = signal('');
   readonly processingId = signal<number | null>(null);
+  /** Mot de passe temporaire affiché à l'admin juste après une réinitialisation */
+  readonly motDePasseTemporaire = signal<{ nom: string; telephone: string; valeur: string } | null>(null);
 
   readonly utilisateursFiltres = computed(() => this.filtrer(this.filtre()));
 
@@ -196,6 +213,30 @@ export class AdminUtilisateursComponent implements OnInit {
       },
       error: error => {
         this.errorMessage.set(messageErreur(error, 'L’action a échoué. Réessayez.'));
+        this.processingId.set(null);
+      }
+    });
+  }
+
+  reinitialiserMotDePasse(utilisateur: BackendUtilisateurInfo): void {
+    if (!window.confirm(`Réinitialiser le mot de passe de ${utilisateur.prenom} ${utilisateur.nom} ? Son mot de passe actuel ne fonctionnera plus.`)) {
+      return;
+    }
+    this.processingId.set(utilisateur.id);
+    this.errorMessage.set('');
+    this.actionMessage.set('');
+    this.motDePasseTemporaire.set(null);
+    this.adminService.reinitialiserMotDePasse(utilisateur.id).subscribe({
+      next: response => {
+        this.motDePasseTemporaire.set({
+          nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+          telephone: utilisateur.telephone,
+          valeur: response.data.motDePasseTemporaire
+        });
+        this.processingId.set(null);
+      },
+      error: error => {
+        this.errorMessage.set(messageErreur(error, 'Le mot de passe n’a pas pu être réinitialisé. Réessayez.'));
         this.processingId.set(null);
       }
     });

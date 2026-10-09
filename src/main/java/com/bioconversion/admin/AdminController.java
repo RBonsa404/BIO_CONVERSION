@@ -12,6 +12,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * Endpoints d'administration. L'accès est restreint aux rôles administrateurs
  * dans {@link com.bioconversion.config.SecurityConfig}.
@@ -47,6 +49,15 @@ public class AdminController {
     @PutMapping("/utilisateurs/{id}/reactiver")
     public ResponseEntity<ApiResponse<UtilisateurResponse>> reactiver(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(adminService.reactiver(id), "Compte réactivé"));
+    }
+
+    /** Mot de passe oublié : renvoie un mot de passe temporaire à transmettre à l'utilisateur. */
+    @PutMapping("/utilisateurs/{id}/reinitialiser-mot-de-passe")
+    public ResponseEntity<ApiResponse<Map<String, String>>> reinitialiserMotDePasse(@PathVariable Long id) {
+        String motDePasseTemporaire = adminService.reinitialiserMotDePasse(id);
+        return ResponseEntity.ok(ApiResponse.success(
+                Map.of("motDePasseTemporaire", motDePasseTemporaire),
+                "Mot de passe réinitialisé"));
     }
 
     @GetMapping("/statistiques")
