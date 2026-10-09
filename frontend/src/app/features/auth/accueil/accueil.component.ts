@@ -56,16 +56,13 @@ type Profile = 'producteur' | 'eleveur';
               <span class="card-hint">Je produis et je vends mes larves</span>
               <span class="card-go">Créer mon profil</span>
             </button>
-            <button type="button" class="card" (click)="selectProfile('eleveur', 'PISCICULTURE')">
-              <span class="card-icon" aria-hidden="true"><i class="ico" style="--icone: url('/icons/pisciculteur.svg')"></i></span>
-              <span class="card-title">Pisciculteur</span>
-              <span class="card-hint">J’achète des larves pour mes poissons</span>
-              <span class="card-go">Créer mon profil</span>
-            </button>
-            <button type="button" class="card" (click)="selectProfile('eleveur', 'AVICULTURE')">
-              <span class="card-icon" aria-hidden="true"><i class="ico" style="--icone: url('/icons/aviculteur.svg')"></i></span>
-              <span class="card-title">Aviculteur</span>
-              <span class="card-hint">J’achète des larves pour ma volaille</span>
+            <button type="button" class="card" (click)="selectProfile('eleveur')">
+              <span class="card-icon duo" aria-hidden="true">
+                <i class="ico" style="--icone: url('/icons/pisciculteur.svg')"></i>
+                <i class="ico" style="--icone: url('/icons/aviculteur.svg')"></i>
+              </span>
+              <span class="card-title">Éleveur</span>
+              <span class="card-hint">J’achète des larves pour mes poissons ou ma volaille</span>
               <span class="card-go">Créer mon profil</span>
             </button>
           </div>
@@ -192,7 +189,7 @@ type Profile = 'producteur' | 'eleveur';
     .lead + .lead { margin-top: 6px; }
 
     .ask { margin-top: clamp(16px, 3.2vh, 32px); color: var(--bordeaux); font: 700 clamp(19px, 2.7vh, 24px)/1.2 var(--serif); }
-    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
     .card { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 14px 12px; border: 1px solid #dcdccf; border-radius: 14px; background: #fff; color: inherit; font: inherit; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
     .card:hover, .card:focus-visible { border-color: var(--vert); background: #f6faf1; outline: none; }
     .card:focus-visible { box-shadow: 0 0 0 3px #4e7d3f55; }
@@ -219,6 +216,8 @@ type Profile = 'producteur' | 'eleveur';
     /* Icônes Flaticon (SVG colorés en vert par masque CSS) */
     .ico { display: block; background-color: var(--vert); -webkit-mask: var(--icone) center / contain no-repeat; mask: var(--icone) center / contain no-repeat; }
     .card-icon .ico { width: 26px; height: 26px; }
+    .card-icon.duo { width: auto; display: flex; gap: 6px; padding: 0 12px; border-radius: 23px; }
+    .card-icon.duo .ico { width: 22px; height: 22px; }
     .v-icon .ico { width: 22px; height: 22px; }
     .v-icon svg { width: 22px; height: 22px; fill: none; stroke: var(--vert); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -379,12 +378,8 @@ export class AccueilComponent implements OnInit, OnDestroy {
     }, 3000);
   }
 
-  /* Le type d'élevage choisi sur la carte est présélectionné dans le formulaire */
-  selectProfile(profile: Profile, typeElevage?: 'PISCICULTURE' | 'AVICULTURE'): void {
-    if (profile === 'producteur') {
-      this.router.navigate(['/inscription/producteur']);
-    } else {
-      this.router.navigate(['/inscription/eleveur'], { queryParams: typeElevage ? { type: typeElevage } : {} });
-    }
+  /* Le type d'élevage (pisciculture ou aviculture) se choisit une seule fois, dans le formulaire éleveur */
+  selectProfile(profile: Profile): void {
+    this.router.navigate([profile === 'producteur' ? '/inscription/producteur' : '/inscription/eleveur']);
   }
 }
