@@ -1,7 +1,8 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import * as L from 'leaflet';
 import { AuthService } from '../../core/services/auth.service';
 import { MarketplaceService, ProducteurLocalise, Produit } from '../../core/services/marketplace.service';
 import { messageErreur } from '../../core/utils/http-error';
@@ -60,17 +61,8 @@ const OUAGADOUGOU = { latitude: 12.3714, longitude: -1.5197 };
           <p class="mb-3 text-sm text-text">
             {{ producteurs().length }} producteur(s) dans un rayon de {{ rayonKm() }} km autour de {{ centreLabel() }}
           </p>
-          <div class="producer-map" role="group" aria-label="Emplacements des producteurs autour de la zone de recherche">
-            <span class="map-city">{{ centreLabel() }}</span>
-            <span class="map-radius" aria-hidden="true"></span>
-            <span class="map-home" [title]="centreLabel()" aria-label="Centre de la recherche"></span>
-            @for (producteur of producteurs(); track producteur.producteurId) {
-              <a class="map-marker"
-                 [ngStyle]="markerStyle(producteur)"
-                 [attr.aria-label]="'Producteur ' + producteur.nomExploitation"
-                 [title]="producteur.nomExploitation + ' · ' + (producteur.distanceKm | number:'1.0-1') + ' km'"
-                 [routerLink]="['/producteur', producteur.producteurId]">●</a>
-            }
+          <div class="producer-map">
+            <div #carte class="leaflet-host" role="region" aria-label="Carte des producteurs autour de la zone de recherche"></div>
             @if (!isLoadingMap() && !mapError() && producteurs().length === 0) {
               <div class="map-empty">Aucun producteur dans ce rayon. Élargissez la recherche.</div>
             }
@@ -84,7 +76,7 @@ const OUAGADOUGOU = { latitude: 12.3714, longitude: -1.5197 };
               </div>
             }
           </div>
-          <p class="mt-3 text-xs text-text">Vue schématique : les repères sont placés d’après les coordonnées GPS des exploitations.</p>
+          <p class="mt-3 text-xs text-text">Cliquez sur un repère pour voir le producteur. Fond de carte © OpenStreetMap.</p>
         </section>
 
         <section aria-label="Produits disponibles" class="space-y-3">
@@ -127,32 +119,16 @@ const OUAGADOUGOU = { latitude: 12.3714, longitude: -1.5197 };
     </div>
   `,
   styles: `
-    .producer-map {
-      position: relative;
-      min-height: 520px;
-      overflow: hidden;
-      border: 1px solid #e4e5dc;
-      border-radius: 12px;
-      background-color: #f1f3e9;
-      background-image:
-        linear-gradient(25deg, transparent 47%, #fff 48%, #fff 50%, transparent 51%),
-        linear-gradient(152deg, transparent 44%, #fff 45%, #fff 47%, transparent 48%),
-        linear-gradient(78deg, transparent 39%, #e2ead7 40%, #e2ead7 48%, transparent 49%),
-        linear-gradient(5deg, transparent 62%, #fff 63%, #fff 64%, transparent 65%),
-        repeating-linear-gradient(0deg, transparent 0 62px, #e1e7d9 63px 64px),
-        repeating-linear-gradient(90deg, transparent 0 74px, #e1e7d9 75px 76px);
-    }
-    .map-city { position: absolute; left: 50%; top: 54%; z-index: 2; transform: translateX(-50%); padding: 4px 7px; border-radius: 4px; background: #f1f3e9dd; color: #3f4a57; font-weight: 700; white-space: nowrap; }
-    .map-radius { position: absolute; left: 50%; top: 50%; width: 86%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid #4e7d3f88; border-radius: 50%; background: #e8f0df35; }
-    .map-home { position: absolute; left: 50%; top: 50%; z-index: 3; width: 15px; height: 15px; transform: translate(-50%, -50%); border: 3px solid white; border-radius: 50%; background: #3b82c4; box-shadow: 0 1px 4px #3f4a5780; }
-    .map-marker { position: absolute; z-index: 4; width: 27px; height: 31px; transform: translate(-50%, -100%); border: 0; border-radius: 50% 50% 50% 0; background: #64102f; color: white; font-size: 11px; line-height: 27px; text-align: center; text-decoration: none; cursor: pointer; box-shadow: 0 2px 4px #3f08204a; }
-    .map-marker:hover, .map-marker:focus-visible { z-index: 5; background: #3f0820; outline: 2px solid white; }
-    .map-empty { position: absolute; inset: auto 16px 16px; z-index: 6; border-radius: 8px; background: white; padding: 10px 12px; color: #3f4a57; font-size: 13px; box-shadow: 0 1px 4px #3f08201a; }
+    .producer-map { position: relative; height: 520px; overflow: hidden; border: 1px solid #e4e5dc; border-radius: 12px; background: #f1f3e9; }
+    .leaflet-host { position: absolute; inset: 0; z-index: 1; }
+    .map-empty { position: absolute; inset: auto 16px 16px; z-index: 1000; border-radius: 8px; background: white; padding: 10px 12px; color: #3f4a57; font-size: 13px; box-shadow: 0 1px 4px #3f08201a; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-    @media (max-width: 1023px) { .producer-map { min-height: 360px; } }
+    @media (max-width: 1023px) { .producer-map { height: 360px; } }
   `
 })
-export class MarketplaceComponent implements OnInit {
+export class MarketplaceComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('carte', { static: true }) private carteElement!: ElementRef<HTMLDivElement>;
+
   readonly produits = signal<Produit[]>([]);
   readonly producteurs = signal<ProducteurLocalise[]>([]);
   readonly searchTerm = signal('');
@@ -168,6 +144,10 @@ export class MarketplaceComponent implements OnInit {
 
   searchInput = '';
   private centre = { ...OUAGADOUGOU };
+
+  /* Carte Leaflet (fond OpenStreetMap, gratuit) et calque des repères redessiné à chaque recherche */
+  private carte?: L.Map;
+  private calqueRecherche = L.layerGroup();
 
   readonly libelleType = libelleTypeProduit;
 
@@ -191,7 +171,9 @@ export class MarketplaceComponent implements OnInit {
 
   constructor(
     private marketplaceService: MarketplaceService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router,
+    private zone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -203,6 +185,24 @@ export class MarketplaceComponent implements OnInit {
     }
     this.loadProduits();
     this.chargerProducteurs();
+  }
+
+  ngAfterViewInit(): void {
+    // Leaflet écoute la souris en permanence : on le sort de la détection de changements d'Angular
+    this.zone.runOutsideAngular(() => {
+      this.carte = L.map(this.carteElement.nativeElement, { scrollWheelZoom: false })
+        .setView([this.centre.latitude, this.centre.longitude], 9);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(this.carte);
+      this.calqueRecherche.addTo(this.carte);
+    });
+    this.dessinerCarte();
+  }
+
+  ngOnDestroy(): void {
+    this.carte?.remove();
   }
 
   applySearch(): void {
@@ -248,6 +248,7 @@ export class MarketplaceComponent implements OnInit {
       next: response => {
         this.producteurs.set(response.data);
         this.isLoadingMap.set(false);
+        this.dessinerCarte();
       },
       error: error => {
         this.mapError.set(messageErreur(error, 'Impossible de charger les producteurs autour de cette zone.'));
@@ -256,15 +257,47 @@ export class MarketplaceComponent implements OnInit {
     });
   }
 
-  /** Place un repère : le bord du cercle correspond au rayon de recherche. */
-  markerStyle(producteur: ProducteurLocalise): Record<string, string> {
-    const latitudeDeltaKm = (producteur.latitude - this.centre.latitude) * 111;
-    const longitudeDeltaKm = (producteur.longitude - this.centre.longitude) * 111
-      * Math.cos(this.centre.latitude * Math.PI / 180);
-    const scale = Math.max(this.rayonKm(), 1);
-    const left = Math.max(5, Math.min(95, 50 + longitudeDeltaKm / scale * 43));
-    const top = Math.max(8, Math.min(95, 50 - latitudeDeltaKm / scale * 43));
-    return { left: `${left}%`, top: `${top}%` };
+  /** Redessine le cercle de recherche, le centre et un repère par producteur trouvé. */
+  private dessinerCarte(): void {
+    const carte = this.carte;
+    if (!carte) {
+      return;
+    }
+    this.zone.runOutsideAngular(() => {
+      this.calqueRecherche.clearLayers();
+      const centre = L.latLng(this.centre.latitude, this.centre.longitude);
+
+      L.circle(centre, {
+        radius: this.rayonKm() * 1000,
+        color: '#4e7d3f',
+        weight: 1,
+        fillColor: '#e8f0df',
+        fillOpacity: 0.25
+      }).addTo(this.calqueRecherche);
+
+      L.circleMarker(centre, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#3b82c4', fillOpacity: 1 })
+        .bindTooltip(this.texte(this.centreLabel()))
+        .addTo(this.calqueRecherche);
+
+      for (const producteur of this.producteurs()) {
+        L.circleMarker([producteur.latitude, producteur.longitude], {
+          radius: 9, color: '#ffffff', weight: 2, fillColor: '#64102f', fillOpacity: 1
+        })
+          .bindTooltip(this.texte(`${producteur.nomExploitation} · ${producteur.distanceKm.toFixed(1)} km`))
+          .on('click', () => this.zone.run(() => this.router.navigate(['/producteur', producteur.producteurId])))
+          .addTo(this.calqueRecherche);
+      }
+
+      // Cadre la carte sur le cercle de recherche (toBounds attend un diamètre en mètres)
+      carte.fitBounds(centre.toBounds(this.rayonKm() * 2000), { padding: [12, 12] });
+    });
+  }
+
+  /** Texte des info-bulles : passé comme élément pour qu'un nom ne soit jamais interprété comme du HTML. */
+  private texte(contenu: string): HTMLElement {
+    const element = document.createElement('span');
+    element.textContent = contenu;
+    return element;
   }
 
   producerDistance(producteurId: number): string {
