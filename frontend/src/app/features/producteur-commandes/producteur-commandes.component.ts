@@ -74,7 +74,11 @@ type Filtre = 'actives' | 'terminees' | 'toutes';
                 }
                 <p class="pt-2 font-semibold text-wine">{{ commande.montantTotal | number:'1.0-0' }} FCFA</p>
                 @if (commande.statutPaiement) {
-                  <p class="text-sm text-text">Paiement : {{ libellePaiement(commande.statutPaiement) }}</p>
+                  <p class="text-sm text-text">
+                    Paiement : {{ libellePaiement(commande.statutPaiement) }}
+                    @if (commande.operateurPaiement === 'ESPECES') { (espèces) }
+                    @if (commande.operateurPaiement === 'ORANGE_MONEY') { (Orange Money) }
+                  </p>
                 }
               </div>
 
@@ -87,7 +91,20 @@ type Filtre = 'actives' | 'terminees' | 'toutes';
                             class="rounded-lg border border-wine bg-white px-5 py-2.5 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">Refuser</button>
                   }
                   @case ('CONFIRME') {
-                    <p class="text-sm text-text">En attente du règlement de l’éleveur.</p>
+                    @if (commande.statutPaiement === 'EN_ATTENTE' && commande.operateurPaiement === 'ESPECES') {
+                      <div class="w-full rounded-xl border border-amber-300 bg-amber-50 p-4">
+                        <p class="text-sm text-amber-800">
+                          L’éleveur a choisi de payer en espèces. Confirmez dès que vous avez reçu
+                          {{ commande.montantTotal | number:'1.0-0' }} FCFA : la facture sera alors générée.
+                        </p>
+                        <button type="button" (click)="confirmerEncaissement(commande)" [disabled]="processingId() === commande.idCommande"
+                                class="mt-3 rounded-lg bg-green px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                          Confirmer l’encaissement de {{ commande.montantTotal | number:'1.0-0' }} FCFA
+                        </button>
+                      </div>
+                    } @else {
+                      <p class="text-sm text-text">En attente du règlement de l’éleveur.</p>
+                    }
                   }
                   @case ('PAYE') {
                     <button type="button" (click)="agir(commande, 'expedier')" [disabled]="processingId() === commande.idCommande"
@@ -195,6 +212,27 @@ export class ProducteurCommandesComponent implements OnInit {
         this.errorMessage.set(messageErreur(error, `L’action sur la commande ${commande.numeroCommande} a échoué. Réessayez.`));
         this.processingId.set(null);
         this.loadCommandes();
+      }
+    });
+  }
+
+  confirmerEncaissement(commande: Commande): void {
+    if (!window.confirm(`Confirmez-vous avoir reçu ${commande.montantTotal} FCFA en espèces pour la commande ${commande.numeroCommande} ?`)) {
+      return;
+    }
+    this.processingId.set(commande.idCommande);
+    this.errorMessage.set('');
+    this.actionMessage.set('');
+    this.paiementService.confirmerEncaissementEspeces(commande.idCommande).subscribe({
+      next: () => {
+        this.actionMessage.set(`Encaissement confirmé : la commande ${commande.numeroCommande} est payée, vous pouvez l’expédier.`);
+        this.processingId.set(null);
+        // Statut de commande, paiement et facture changent ensemble : on relit l'état serveur
+        this.loadCommandes();
+      },
+      error: error => {
+        this.errorMessage.set(messageErreur(error, `L’encaissement de la commande ${commande.numeroCommande} n’a pas pu être confirmé. Réessayez.`));
+        this.processingId.set(null);
       }
     });
   }

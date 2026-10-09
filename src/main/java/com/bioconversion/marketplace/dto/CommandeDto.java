@@ -42,6 +42,8 @@ public class CommandeDto {
 
     // État du règlement (null tant qu'aucun paiement n'a été initié)
     private StatutPaiement statutPaiement;
+    // Mode de règlement choisi : "ORANGE_MONEY" ou "ESPECES" (null tant qu'aucun paiement n'a été initié)
+    private String operateurPaiement;
     private String referenceFacture;
 
     public static CommandeDto fromEntity(Commande commande) {
@@ -79,6 +81,7 @@ public class CommandeDto {
                 .telephoneEleveur(commande.getEleveur() != null ? commande.getEleveur().getTelephone() : null)
                 .telephoneProducteur(commande.getProducteur() != null ? commande.getProducteur().getTelephone() : null)
                 .statutPaiement(paiement != null ? paiement.getStatutPaiement() : null)
+                .operateurPaiement(paiement != null ? paiement.getOperateur() : null)
                 .referenceFacture(paiement != null && paiement.getFacture() != null
                         ? paiement.getFacture().getReference()
                         : null)

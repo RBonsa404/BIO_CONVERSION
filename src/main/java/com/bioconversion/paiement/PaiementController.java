@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
- * Module C — Paiement Intégré (Orange Money).
+ * Module C — Paiement Intégré (Orange Money et espèces).
  * C-MUST-1 à C-MUST-4 du CDC v1.1.
  */
 @RestController
@@ -30,7 +30,7 @@ public class PaiementController {
     private final ObjectMapper objectMapper;
 
     /**
-     * C-MUST-1 : initie le règlement d'une commande.
+     * C-MUST-1 : initie le règlement d'une commande (ORANGE_MONEY ou ESPECES).
      * Étape 2 du diagramme de séquence "Validation et paiement" (POST /paiements).
      */
     @PostMapping
@@ -45,10 +45,12 @@ public class PaiementController {
         Paiement paiement = paiementService.initierPaiement(
                 request.idCommande(), request.operateur(), currentUserId);
 
+        String message = PaiementServiceImpl.ESPECES.equals(paiement.getOperateur())
+                ? "Paiement en espèces enregistré, en attente de la confirmation du producteur"
+                : "Paiement initié, en attente de confirmation opérateur";
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        PaiementResponse.from(paiement),
-                        "Paiement initié, en attente de confirmation opérateur"));
+                .body(ApiResponse.success(PaiementResponse.from(paiement), message));
     }
 
     /**
@@ -136,6 +138,24 @@ public class PaiementController {
         Paiement paiement = paiementService.confirmerParSimulation(idCommande, succes, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(PaiementResponse.from(paiement),
                 succes ? "Paiement confirmé" : "Échec du paiement enregistré"));
+    }
+
+    /**
+     * Paiement en espèces : le producteur confirme avoir reçu l'argent de l'éleveur.
+     * La commande passe à PAYE et la facture est générée, comme pour Orange Money.
+     */
+    @PostMapping("/commande/{idCommande}/especes/confirmer")
+    public ResponseEntity<ApiResponse<PaiementResponse>> confirmerEncaissementEspeces(
+            @PathVariable Long idCommande) {
+
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Paiement paiement = paiementService.confirmerEncaissementEspeces(idCommande, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(PaiementResponse.from(paiement),
+                "Encaissement en espèces confirmé"));
     }
 
     @GetMapping("/producteur/{producteurId}/solde")

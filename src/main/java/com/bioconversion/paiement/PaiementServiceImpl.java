@@ -19,13 +19,17 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Implémentation du service métier Module C — Paiement Intégré (Orange Money).
+ * Implémentation du service métier Module C — Paiement Intégré (Orange Money et espèces).
  * CDC v1.1, C-MUST-1 à C-MUST-4.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaiementServiceImpl implements PaiementService {
+
+    /** Opérateurs acceptés (cf. Paiement.operateur). */
+    public static final String ORANGE_MONEY = "ORANGE_MONEY";
+    public static final String ESPECES = "ESPECES";
 
     // Lecture seule de Commande (Module B) — on ne modifie jamais leurs fichiers
     // source, seulement l'état via les setters déjà exposés par leur entité.
@@ -72,6 +76,8 @@ public class PaiementServiceImpl implements PaiementService {
     @Override
     @Transactional
     public Paiement initierPaiement(Long idCommande, String operateur, Long currentUserId) {
+        String operateurNormalise = normaliserOperateur(operateur);
+
         Commande commande = commandeRepository.findById(idCommande)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Commande introuvable : " + idCommande));
@@ -98,11 +104,20 @@ public class PaiementServiceImpl implements PaiementService {
         Paiement existant = commande.getPaiement();
         if (existant != null) {
             return switch (existant.getStatutPaiement()) {
-                // Une demande déjà en cours est reprise telle quelle
-                case EN_ATTENTE -> existant;
+                case EN_ATTENTE -> {
+                    // Même mode de paiement : la demande en cours est reprise telle quelle
+                    if (operateurNormalise.equals(existant.getOperateur())) {
+                        yield existant;
+                    }
+                    // Changement de mode (ex : espèces → Orange Money) : la demande repart avec le nouveau mode
+                    existant.setOperateur(operateurNormalise);
+                    existant.setMontant(montant);
+                    existant.setReferenceTransaction(UUID.randomUUID().toString());
+                    yield paiementRepository.save(existant);
+                }
                 // Après un échec opérateur, la même ligne repart avec une nouvelle référence
                 case ECHOUE -> {
-                    existant.setOperateur(operateur);
+                    existant.setOperateur(operateurNormalise);
                     existant.setMontant(montant);
                     existant.setReferenceTransaction(UUID.randomUUID().toString());
                     existant.effectuerPaiement();
@@ -115,7 +130,7 @@ public class PaiementServiceImpl implements PaiementService {
 
         Paiement paiement = Paiement.builder()
                 .commande(commande)
-                .operateur(operateur)
+                .operateur(operateurNormalise)
                 .montant(montant)
                 .referenceTransaction(UUID.randomUUID().toString())
                 .datePaiement(OffsetDateTime.now())
@@ -136,6 +151,10 @@ public class PaiementServiceImpl implements PaiementService {
             throw new com.bioconversion.common.exception.ForbiddenException(
                     "Vous n'êtes pas autorisé à confirmer ce paiement");
         }
+        // Un paiement en espèces n'est confirmé que par le producteur, à la remise de l'argent
+        if (ESPECES.equals(paiement.getOperateur())) {
+            throw new BusinessException("Un paiement en espèces est confirmé par le producteur à la réception de l'argent");
+        }
         if (paiement.getStatutPaiement() != StatutPaiement.EN_ATTENTE) {
             throw new BusinessException("Ce paiement n'est plus en attente de confirmation");
         }
@@ -144,6 +163,29 @@ public class PaiementServiceImpl implements PaiementService {
         return succes
                 ? traiterWebhookSucces(paiement.getReferenceTransaction())
                 : traiterWebhookEchec(paiement.getReferenceTransaction());
+    }
+
+    @Override
+    @Transactional
+    public Paiement confirmerEncaissementEspeces(Long idCommande, Long currentUserId) {
+        Paiement paiement = paiementRepository.findByCommandeIdCommande(idCommande)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun paiement pour la commande " + idCommande));
+
+        // Seul le producteur de la commande peut confirmer avoir reçu l'argent
+        if (!paiement.getCommande().getProducteur().getIdUtilisateur().equals(currentUserId)) {
+            throw new com.bioconversion.common.exception.ForbiddenException(
+                    "Seul le producteur de la commande peut confirmer l'encaissement");
+        }
+        if (!ESPECES.equals(paiement.getOperateur())) {
+            throw new BusinessException("Ce paiement n'est pas un paiement en espèces");
+        }
+        if (paiement.getStatutPaiement() != StatutPaiement.EN_ATTENTE) {
+            throw new BusinessException("Ce paiement n'est plus en attente de confirmation");
+        }
+
+        // Même traitement qu'une confirmation Orange Money : commande PAYE et facture générée
+        return traiterWebhookSucces(paiement.getReferenceTransaction());
     }
 
     @Override
@@ -233,6 +275,15 @@ public class PaiementServiceImpl implements PaiementService {
                     "Vous n'êtes pas autorisé à consulter ce solde");
         }
         return paiementRepository.sumConfirmedPaymentsByProducteurId(producteurId);
+    }
+
+    /** N'accepte que les deux modes de paiement prévus, quelle que soit la casse envoyée. */
+    private String normaliserOperateur(String operateur) {
+        String valeur = operateur == null ? "" : operateur.trim().toUpperCase();
+        if (!ORANGE_MONEY.equals(valeur) && !ESPECES.equals(valeur)) {
+            throw new BusinessException("Mode de paiement inconnu : choisissez Orange Money ou espèces");
+        }
+        return valeur;
     }
 
     private Paiement trouverParReference(String referenceTransaction) {

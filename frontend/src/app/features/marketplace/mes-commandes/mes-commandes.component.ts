@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { Commande, MarketplaceService, StatutCommande } from '../../../core/services/marketplace.service';
+import { Commande, MarketplaceService, OperateurPaiement, StatutCommande } from '../../../core/services/marketplace.service';
 import { PaiementService } from '../../../core/services/paiement.service';
 import { messageErreur } from '../../../core/utils/http-error';
 import { STATUTS_COMMANDE_ACTIFS, libelleCommande, libellePaiement, varianteCommande } from '../../../core/utils/statuts';
@@ -73,7 +73,25 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../../shared/component
                     </button>
                   }
                   @case ('CONFIRME') {
-                    @if (commande.statutPaiement === 'EN_ATTENTE') {
+                    @if (commande.statutPaiement === 'EN_ATTENTE' && commande.operateurPaiement === 'ESPECES') {
+                      <div class="rounded-xl border border-amber-300 bg-amber-50 p-4">
+                        <p class="font-semibold text-amber-800">Paiement en espèces choisi</p>
+                        <p class="mt-1 text-sm text-amber-800">
+                          Remettez {{ commande.montantTotal | number:'1.0-0' }} FCFA au producteur. Dès qu’il aura confirmé
+                          la réception de l’argent, votre commande sera payée et votre facture disponible.
+                        </p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                          <button type="button" (click)="payer(commande, 'ORANGE_MONEY')" [disabled]="processingId() === commande.idCommande"
+                                  class="rounded-lg border border-wine bg-white px-5 py-2.5 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">
+                            Payer plutôt avec Orange Money
+                          </button>
+                          <button type="button" (click)="loadCommandes()"
+                                  class="rounded-lg border border-line bg-white px-5 py-2.5 text-sm font-semibold text-text hover:border-wine">
+                            Actualiser
+                          </button>
+                        </div>
+                      </div>
+                    } @else if (commande.statutPaiement === 'EN_ATTENTE') {
                       <div class="rounded-xl border border-amber-300 bg-amber-50 p-4">
                         <p class="font-semibold text-amber-800">Paiement Orange Money en attente de confirmation</p>
                         @if (simulation()) {
@@ -105,9 +123,13 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../../shared/component
                         <p class="mb-3 text-sm text-text">Le producteur a validé votre commande : il ne reste qu’à la régler.</p>
                       }
                       <div class="flex flex-wrap gap-2">
-                        <button type="button" (click)="payer(commande)" [disabled]="processingId() === commande.idCommande"
+                        <button type="button" (click)="payer(commande, 'ORANGE_MONEY')" [disabled]="processingId() === commande.idCommande"
                                 class="rounded-lg bg-wine px-5 py-2.5 text-sm font-semibold text-white hover:bg-wine-dark disabled:opacity-50">
                           Payer {{ commande.montantTotal | number:'1.0-0' }} FCFA avec Orange Money
+                        </button>
+                        <button type="button" (click)="payer(commande, 'ESPECES')" [disabled]="processingId() === commande.idCommande"
+                                class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                          Payer en espèces
                         </button>
                         <button type="button" (click)="annuler(commande)" [disabled]="processingId() === commande.idCommande"
                                 class="rounded-lg border border-wine bg-white px-5 py-2.5 text-sm font-semibold text-wine hover:bg-red-50 disabled:opacity-50">
@@ -194,12 +216,14 @@ export class MesCommandesComponent implements OnInit {
     });
   }
 
-  payer(commande: Commande): void {
+  payer(commande: Commande, operateur: OperateurPaiement): void {
     this.debuter(commande);
-    this.paiementService.initierPaiement(commande.idCommande, 'ORANGE_MONEY').subscribe({
+    this.paiementService.initierPaiement(commande.idCommande, operateur).subscribe({
       next: response => {
-        this.remplacer({ ...commande, statutPaiement: response.data.statutPaiement });
-        this.actionMessage.set(`Demande de paiement envoyée pour la commande ${commande.numeroCommande}.`);
+        this.remplacer({ ...commande, statutPaiement: response.data.statutPaiement, operateurPaiement: operateur });
+        this.actionMessage.set(operateur === 'ESPECES'
+          ? `Paiement en espèces choisi pour la commande ${commande.numeroCommande} : remettez l’argent au producteur.`
+          : `Demande de paiement envoyée pour la commande ${commande.numeroCommande}.`);
         this.processingId.set(null);
       },
       error: error => this.echec(error, 'Le paiement n’a pas pu être initié. Réessayez.')
