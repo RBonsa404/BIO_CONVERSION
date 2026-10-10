@@ -66,6 +66,11 @@ export class AdminService {
     );
   }
 
+  /** Pièce d'identité (CNIB) déposée à l'inscription : image ou PDF, réservée aux administrateurs. */
+  pieceIdentite(utilisateurId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/utilisateurs/${utilisateurId}/piece-identite`, { responseType: 'blob' });
+  }
+
   statistiques(): Observable<ApiResponse<StatistiquesPlateforme>> {
     return this.http.get<ApiResponse<StatistiquesPlateforme>>(`${this.apiUrl}/statistiques`);
   }

@@ -45,8 +45,15 @@ export class AuthService {
     );
   }
 
-  registerProducteur(data: ProducteurRegisterRequest): Observable<ApiResponse<BackendUtilisateurInfo>> {
-    return this.http.post<ApiResponse<BackendUtilisateurInfo>>(`${this.apiUrl}/auth/register/producteur`, data);
+  /**
+   * Inscription producteur : les informations (partie « donnees », en JSON) et la photo ou le
+   * scan de la CNIB (partie « cnib ») partent ensemble, dans une seule requête multipart.
+   */
+  registerProducteur(data: ProducteurRegisterRequest, cnib: File): Observable<ApiResponse<BackendUtilisateurInfo>> {
+    const formulaire = new FormData();
+    formulaire.append('donnees', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    formulaire.append('cnib', cnib);
+    return this.http.post<ApiResponse<BackendUtilisateurInfo>>(`${this.apiUrl}/auth/register/producteur`, formulaire);
   }
 
   registerEleveur(data: EleveurRegisterRequest): Observable<ApiResponse<BackendUtilisateurInfo>> {

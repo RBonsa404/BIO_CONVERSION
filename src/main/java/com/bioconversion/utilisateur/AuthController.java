@@ -12,8 +12,10 @@ import com.bioconversion.utilisateur.dto.UtilisateurResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Contrôleur REST pour l'authentification, l'inscription et le profil des utilisateurs.
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PieceIdentiteService pieceIdentiteService;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest request) {
@@ -31,9 +34,15 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(response, "Authentification réussie"));
     }
 
-    @PostMapping("/register/producteur")
-    public ResponseEntity<ApiResponse<UtilisateurResponse>> registerProducteur(@Valid @RequestBody ProducteurRegisterRequest request) {
-        UtilisateurResponse response = authService.registerProducteur(request);
+    /**
+     * Inscription producteur (CDC §2.2.4) : requête multipart avec les informations du compte
+     * (partie « donnees », en JSON) et la photo ou le scan de la CNIB (partie « cnib »).
+     */
+    @PostMapping(value = "/register/producteur", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<UtilisateurResponse>> registerProducteur(
+            @Valid @RequestPart("donnees") ProducteurRegisterRequest request,
+            @RequestPart(value = "cnib", required = false) MultipartFile cnib) {
+        UtilisateurResponse response = pieceIdentiteService.inscrireProducteur(request, cnib);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Compte producteur créé avec succès"));
     }
