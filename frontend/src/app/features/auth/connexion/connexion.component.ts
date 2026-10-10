@@ -188,6 +188,28 @@ import { CommonModule } from '@angular/common';
               Le mot de passe est requis
             </div>
 
+            <!-- Mot de passe oublié -->
+            <div class="mt-2 text-right">
+              <button
+                type="button"
+                (click)="toggleMotDePasseOublie()"
+                class="text-sm font-semibold text-green hover:underline"
+                [attr.aria-expanded]="showMotDePasseOublie"
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+
+            <div
+              *ngIf="showMotDePasseOublie"
+              role="status"
+              class="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"
+            >
+              Contactez l’administration de BioConversion en indiquant votre numéro de téléphone.
+              Un administrateur vous communiquera un mot de passe temporaire, que vous pourrez
+              ensuite changer dans « Mon profil ».
+            </div>
+
           </div>
 
           <!-- Bouton connexion -->
@@ -254,6 +276,9 @@ export class ConnexionComponent implements OnInit {
   // Contrôle l'affichage du mot de passe
   showPassword = false;
 
+  // Affiche la marche à suivre en cas de mot de passe oublié
+  showMotDePasseOublie = false;
+
   // Page demandée avant la connexion, s'il y en a une
   private retour: string | null = null;
 
@@ -290,6 +315,13 @@ export class ConnexionComponent implements OnInit {
    */
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
+  }
+
+  /**
+   * Affiche ou masque la marche à suivre en cas de mot de passe oublié
+   */
+  toggleMotDePasseOublie(): void {
+    this.showMotDePasseOublie = !this.showMotDePasseOublie;
   }
 
   /**

@@ -58,6 +58,14 @@ export class AdminService {
     );
   }
 
+  /** Mot de passe oublié : génère un mot de passe temporaire à transmettre à l'utilisateur. */
+  reinitialiserMotDePasse(utilisateurId: number): Observable<ApiResponse<{ motDePasseTemporaire: string }>> {
+    return this.http.put<ApiResponse<{ motDePasseTemporaire: string }>>(
+      `${this.apiUrl}/utilisateurs/${utilisateurId}/reinitialiser-mot-de-passe`,
+      null
+    );
+  }
+
   statistiques(): Observable<ApiResponse<StatistiquesPlateforme>> {
     return this.http.get<ApiResponse<StatistiquesPlateforme>>(`${this.apiUrl}/statistiques`);
   }
