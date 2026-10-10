@@ -2,6 +2,8 @@ package com.bioconversion.admin;
 
 import com.bioconversion.admin.dto.StatistiquesPlateformeResponse;
 import com.bioconversion.common.dto.ApiResponse;
+import com.bioconversion.utilisateur.PieceIdentite;
+import com.bioconversion.utilisateur.PieceIdentiteService;
 import com.bioconversion.utilisateur.StatutUtilisateur;
 import com.bioconversion.utilisateur.dto.UtilisateurResponse;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +29,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final PieceIdentiteService pieceIdentiteService;
 
     @GetMapping("/utilisateurs")
     public ResponseEntity<ApiResponse<Page<UtilisateurResponse>>> listerUtilisateurs(
@@ -58,6 +64,18 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(
                 Map.of("motDePasseTemporaire", motDePasseTemporaire),
                 "Mot de passe réinitialisé"));
+    }
+
+    /** CNIB déposée à l'inscription, affichée dans le navigateur de l'administrateur. */
+    @GetMapping("/utilisateurs/{id}/piece-identite")
+    public ResponseEntity<byte[]> pieceIdentite(@PathVariable Long id) {
+        PieceIdentite piece = pieceIdentiteService.lire(id);
+        String nomFichier = "cnib-" + id + "." + PieceIdentiteService.extension(piece.getTypeContenu());
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(piece.getTypeContenu()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nomFichier + "\"")
+                .cacheControl(CacheControl.noStore())
+                .body(piece.getContenu());
     }
 
     @GetMapping("/statistiques")

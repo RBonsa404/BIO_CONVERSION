@@ -43,6 +43,12 @@ type Action = 'valider' | 'refuser' | 'suspendre' | 'reactiver';
         @if (actionMessage()) {
           <div role="status" class="mb-5 rounded-xl bg-green-soft p-4 text-green">{{ actionMessage() }}</div>
         }
+        @if (cnibMessage()) {
+          <div role="status" class="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
+            {{ cnibMessage() }}
+            <button type="button" (click)="cnibMessage.set('')" class="ml-3 font-semibold underline">Fermer</button>
+          </div>
+        }
         @if (motDePasseTemporaire(); as mdp) {
           <div role="status" class="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
             <p>
@@ -94,6 +100,10 @@ type Action = 'valider' | 'refuser' | 'suspendre' | 'reactiver';
                           @if (estAdmin(utilisateur)) {
                             <span class="text-sm text-text">—</span>
                           } @else {
+                            @if (utilisateur.role === 'PRODUCTEUR') {
+                              <button type="button" (click)="voirPieceIdentite(utilisateur)" [disabled]="processingId() === utilisateur.id"
+                                      class="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-text hover:border-wine disabled:opacity-50">Voir la CNIB</button>
+                            }
                             @switch (utilisateur.statut) {
                               @case ('EN_ATTENTE_VALIDATION') {
                                 <button type="button" (click)="agir(utilisateur, 'refuser')" [disabled]="processingId() === utilisateur.id"
@@ -143,6 +153,8 @@ export class AdminUtilisateursComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly actionMessage = signal('');
   readonly processingId = signal<number | null>(null);
+  /** Message sur la CNIB : affiché sans masquer la liste des comptes */
+  readonly cnibMessage = signal('');
   /** Mot de passe temporaire affiché à l'admin juste après une réinitialisation */
   readonly motDePasseTemporaire = signal<{ nom: string; telephone: string; valeur: string } | null>(null);
 
@@ -237,6 +249,37 @@ export class AdminUtilisateursComponent implements OnInit {
       },
       error: error => {
         this.errorMessage.set(messageErreur(error, 'Le mot de passe n’a pas pu être réinitialisé. Réessayez.'));
+        this.processingId.set(null);
+      }
+    });
+  }
+
+  /**
+   * Ouvre la CNIB du producteur dans un nouvel onglet. L'onglet est ouvert tout de suite, au clic,
+   * sinon le navigateur le bloquerait comme une fenêtre publicitaire une fois le fichier reçu.
+   */
+  voirPieceIdentite(utilisateur: BackendUtilisateurInfo): void {
+    const onglet = window.open('', '_blank');
+    this.processingId.set(utilisateur.id);
+    this.cnibMessage.set('');
+    this.actionMessage.set('');
+    this.adminService.pieceIdentite(utilisateur.id).subscribe({
+      next: fichier => {
+        const url = URL.createObjectURL(fichier);
+        if (onglet) {
+          onglet.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+        // Laisse le temps à l'onglet de charger le fichier avant de libérer la mémoire
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        this.processingId.set(null);
+      },
+      error: (error: { status?: number }) => {
+        onglet?.close();
+        this.cnibMessage.set(error?.status === 404
+          ? `${utilisateur.prenom} ${utilisateur.nom} n’a pas déposé de pièce d’identité (compte créé avant cette fonctionnalité).`
+          : 'La pièce d’identité n’a pas pu être affichée. Réessayez.');
         this.processingId.set(null);
       }
     });

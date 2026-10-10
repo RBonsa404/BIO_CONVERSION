@@ -7,6 +7,10 @@ import { Position, champsIdentiques, obtenirPosition, telephoneBurkinabe } from 
 import { AuthService } from '../../../core/services/auth.service';
 import { ProducteurRegisterRequest } from '../../../core/models/producteur-register-request.model';
 
+/* Mêmes règles que le serveur : JPG, PNG ou PDF, 5 Mo au plus */
+const TYPES_CNIB = ['image/jpeg', 'image/png', 'application/pdf'];
+const TAILLE_MAX_CNIB = 5 * 1024 * 1024;
+
 @Component({
   selector: 'app-inscription-producteur',
   standalone: true,
@@ -165,6 +169,31 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
             </div>
           </div>
 
+          <!-- Pièce d'identité -->
+          <div class="mb-8 rounded-2xl border-b border-line pb-7">
+            <h3 class="text-xl font-serif text-wine font-semibold mb-6 flex items-center">
+              <span class="w-8 h-8 bg-wine rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold">4</span>
+              </span>
+              Pièce d'identité
+            </h3>
+
+            <label for="cnib" class="block text-text text-sm font-semibold mb-2">Photo ou scan de votre CNIB *</label>
+            <input
+              id="cnib"
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              (change)="choisirCnib($event)"
+              aria-describedby="cnib-aide"
+              class="w-full rounded-xl border-2 border-dashed border-line px-4 py-3 text-text file:mr-4 file:rounded-lg file:border-0 file:bg-green-soft file:px-4 file:py-2 file:font-semibold file:text-green focus:outline-none focus:border-wine"
+            />
+            <p id="cnib-aide" class="mt-2 text-sm text-text">
+              Format JPG, PNG ou PDF, 5 Mo maximum. Elle est vue uniquement par l’administrateur qui valide votre compte.
+            </p>
+            <p *ngIf="cnib" class="mt-1 text-sm font-medium text-green">Fichier choisi : {{ cnib.name }}</p>
+            <p *ngIf="cnibErreur" class="mt-1 text-sm text-red-600" role="alert">{{ cnibErreur }}</p>
+          </div>
+
           <p *ngIf="inscriptionForm.touched && inscriptionForm.invalid" class="mb-4 text-sm text-red-600" role="alert">
             <span *ngIf="invalide('telephone')">Le numéro de téléphone doit comporter 8 chiffres (ex. +226 70 12 34 56). </span>
             <span *ngIf="invalide('motDePasse')">Le mot de passe doit contenir au moins 6 caractères. </span>
@@ -180,7 +209,7 @@ import { ProducteurRegisterRequest } from '../../../core/models/producteur-regis
           <!-- Submit button -->
           <button
             type="submit"
-            [disabled]="inscriptionForm.invalid || isLoading"
+            [disabled]="inscriptionForm.invalid || !cnib || isLoading"
             class="w-full bg-wine text-white py-4 rounded-xl font-semibold text-lg hover:bg-wine-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl">
             <span *ngIf="!isLoading">S'inscrire</span>
             <span *ngIf="isLoading">Inscription en cours...</span>
@@ -206,6 +235,10 @@ export class InscriptionProducteurComponent {
   inscriptionForm: FormGroup;
   isLoading = false;
   errorMessage = '';
+
+  // Photo ou scan de la CNIB, obligatoire : l'administrateur la vérifie avant de valider le compte
+  cnib: File | null = null;
+  cnibErreur = '';
 
   // Position GPS de l'exploitation : elle place le producteur sur la carte des éleveurs
   position: Position | null = null;
@@ -236,6 +269,25 @@ export class InscriptionProducteurComponent {
     return !!control && control.touched && control.invalid;
   }
 
+  /** Contrôle le fichier dès sa sélection : le serveur refait les mêmes vérifications. */
+  choisirCnib(event: Event): void {
+    const fichier = (event.target as HTMLInputElement).files?.[0] ?? null;
+    this.cnib = null;
+    this.cnibErreur = '';
+    if (!fichier) {
+      return;
+    }
+    if (!TYPES_CNIB.includes(fichier.type)) {
+      this.cnibErreur = 'Format non accepté : choisissez une image JPG, PNG ou un PDF.';
+      return;
+    }
+    if (fichier.size > TAILLE_MAX_CNIB) {
+      this.cnibErreur = 'Le fichier dépasse 5 Mo. Prenez une photo moins lourde ou réduisez le scan.';
+      return;
+    }
+    this.cnib = fichier;
+  }
+
   localiser(): void {
     this.isLocating = true;
     this.positionMessage = '';
@@ -255,8 +307,11 @@ export class InscriptionProducteurComponent {
   }
 
   onSubmit(): void {
-    if (this.inscriptionForm.invalid) {
+    if (this.inscriptionForm.invalid || !this.cnib) {
       this.inscriptionForm.markAllAsTouched();
+      if (!this.cnib && !this.cnibErreur) {
+        this.cnibErreur = 'La photo ou le scan de votre CNIB est obligatoire.';
+      }
       return;
     }
 
@@ -276,7 +331,7 @@ export class InscriptionProducteurComponent {
       ...(this.position ?? {})
     };
 
-    this.authService.registerProducteur(cleanedData).subscribe({
+    this.authService.registerProducteur(cleanedData, this.cnib).subscribe({
       next: () => {
         this.isLoading = false;
         // Le compte reste en attente tant qu'un administrateur ne l'a pas validé
