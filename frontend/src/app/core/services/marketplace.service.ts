@@ -43,6 +43,8 @@ export interface ProducteurProfile {
   statut: string;
   ville: string | null;
   province: string | null;
+  capaciteDerniereMaj: string | null;
+  nombreConsultations: number;
 }
 
 export interface PageResponse<T> {

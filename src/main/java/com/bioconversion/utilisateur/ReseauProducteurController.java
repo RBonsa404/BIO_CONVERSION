@@ -1,12 +1,15 @@
 package com.bioconversion.utilisateur;
 
 import com.bioconversion.common.dto.ApiResponse;
+import com.bioconversion.utilisateur.dto.CommandeValideeNotification;
 import com.bioconversion.utilisateur.dto.ProducteurResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class ReseauProducteurController {
 
     private final ReseauProducteurService reseauProducteurService;
+    private final ProducteurSecurity producteurSecurity;
 
     @GetMapping("/en-attente")
     @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'SUPER_ADMINISTRATEUR')")
@@ -35,9 +39,18 @@ public class ReseauProducteurController {
         return ResponseEntity.ok(ApiResponse.success(producteurs));
     }
 
+    /**
+     * D-SHOULD-1 : consulter la fiche d'un producteur incrémente son compteur de consultations,
+     * sauf quand c'est le producteur lui-même qui consulte sa propre fiche.
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProducteurResponse>> obtenirProducteur(@PathVariable Long id) {
-        Producteur producteur = reseauProducteurService.trouverProducteur(id);
+    public ResponseEntity<ApiResponse<ProducteurResponse>> consulterProducteur(
+            @PathVariable Long id,
+            Authentication authentication) {
+        boolean estSaPropreFiche = authentication != null && producteurSecurity.estProprietaire(id, authentication);
+        Producteur producteur = estSaPropreFiche
+                ? reseauProducteurService.trouverProducteur(id)
+                : reseauProducteurService.consulterProducteur(id);
         return ResponseEntity.ok(ApiResponse.success(ProducteurResponse.from(producteur)));
     }
 
@@ -68,5 +81,25 @@ public class ReseauProducteurController {
         Producteur producteur = reseauProducteurService.validerProducteur(id, approuve);
         return ResponseEntity.ok(ApiResponse.success(
                 ProducteurResponse.from(producteur), "Statut de validation du producteur mis à jour"));
+    }
+
+    /** D-MUST-3 : mise à jour horodatée de la capacité de production (le producteur lui-même ou un admin). */
+    @PatchMapping("/{id}/capacite")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'SUPER_ADMINISTRATEUR') or @producteurSecurity.estProprietaire(#id, authentication)")
+    public ResponseEntity<ApiResponse<ProducteurResponse>> mettreAJourCapacite(
+            @PathVariable Long id,
+            @RequestParam double nouvelleCapacite) {
+        Producteur producteur = reseauProducteurService.mettreAJourCapaciteProduction(id, nouvelleCapacite);
+        return ResponseEntity.ok(ApiResponse.success(
+                ProducteurResponse.from(producteur), "Capacité de production mise à jour"));
+    }
+
+    /** D-MUST-4 : notification (simulée) du producteur quand une commande est validée. */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/commande-validee")
+    public ResponseEntity<ApiResponse<Void>> notifierCommandeValidee(
+            @Valid @RequestBody CommandeValideeNotification notification) {
+        reseauProducteurService.notifierProducteurCommandeValidee(notification);
+        return ResponseEntity.ok(ApiResponse.success(null, "Producteur notifié"));
     }
 }

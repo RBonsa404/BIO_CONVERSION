@@ -97,8 +97,11 @@ public class AuthService {
             if (request.getNomExploitation() != null && !request.getNomExploitation().isBlank()) {
                 p.setNomExploitation(request.getNomExploitation().trim());
             }
-            if (request.getCapaciteProduction() != null) {
+            // D-MUST-3 : la capacité est horodatée seulement quand sa valeur change réellement
+            if (request.getCapaciteProduction() != null
+                    && request.getCapaciteProduction().doubleValue() != p.getCapaciteProduction()) {
                 p.setCapaciteProduction(request.getCapaciteProduction());
+                p.setCapaciteDerniereMaj(java.time.OffsetDateTime.now());
             }
             p.setLocalisation(localisationMiseAJour(p.getLocalisation(), request));
         } else if (utilisateur instanceof Eleveur e) {
