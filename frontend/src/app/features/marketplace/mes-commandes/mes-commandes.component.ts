@@ -140,10 +140,16 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../../shared/component
                   }
                   @case ('PAYE') {
                     <p class="mb-3 text-sm text-text">Paiement {{ libellePaiement(commande.statutPaiement) | lowercase }}. Le producteur prépare l’expédition.</p>
-                    <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
-                            class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
-                      Télécharger la facture
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                      <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                        Télécharger la facture
+                      </button>
+                      <button type="button" (click)="imprimerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                        Imprimer la facture
+                      </button>
+                    </div>
                   }
                   @case ('EXPEDIE') {
                     <p class="mb-3 text-sm text-text">Votre commande est en route. Confirmez sa réception à l’arrivée.</p>
@@ -155,6 +161,10 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../../shared/component
                       <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
                               class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
                         Télécharger la facture
+                      </button>
+                      <button type="button" (click)="imprimerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                        Imprimer la facture
                       </button>
                     </div>
                   }
@@ -277,6 +287,14 @@ export class MesCommandesComponent implements OnInit {
     this.paiementService.telechargerFacture(commande.idCommande, commande.numeroCommande).subscribe({
       next: () => this.processingId.set(null),
       error: () => this.echec(null, `La facture de la commande ${commande.numeroCommande} n’a pas pu être téléchargée.`)
+    });
+  }
+
+  imprimerFacture(commande: Commande): void {
+    this.debuter(commande);
+    this.paiementService.imprimerFacture(commande.idCommande).subscribe({
+      next: () => this.processingId.set(null),
+      error: () => this.echec(null, `La facture de la commande ${commande.numeroCommande} n’a pas pu être imprimée.`)
     });
   }
 

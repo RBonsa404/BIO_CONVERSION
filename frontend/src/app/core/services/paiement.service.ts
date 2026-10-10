@@ -85,4 +85,36 @@ export class PaiementService {
       })
     );
   }
+
+  /**
+   * Imprime la facture PDF d'une commande payée : le PDF est chargé dans un cadre
+   * invisible de la page, puis la fenêtre d'impression du navigateur s'ouvre.
+   */
+  imprimerFacture(idCommande: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/factures/commande/${idCommande}/telecharger`, {
+      responseType: 'blob'
+    }).pipe(
+      tap(blob => {
+        const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+        const cadre = document.createElement('iframe');
+        cadre.style.position = 'fixed';
+        cadre.style.right = '0';
+        cadre.style.bottom = '0';
+        cadre.style.width = '0';
+        cadre.style.height = '0';
+        cadre.style.border = '0';
+        cadre.src = url;
+        cadre.onload = () => {
+          cadre.contentWindow?.focus();
+          cadre.contentWindow?.print();
+        };
+        document.body.appendChild(cadre);
+        // On laisse le temps à l'impression de se faire avant de nettoyer
+        setTimeout(() => {
+          cadre.remove();
+          URL.revokeObjectURL(url);
+        }, 60000);
+      })
+    );
+  }
 }
