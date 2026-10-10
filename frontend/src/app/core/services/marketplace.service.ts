@@ -68,6 +68,8 @@ export type StatutCommande =
 
 export type StatutPaiement = 'EN_ATTENTE' | 'CONFIRME' | 'ECHOUE' | 'REMBOURSE';
 
+export type OperateurPaiement = 'ORANGE_MONEY' | 'ESPECES';
+
 export interface Commande {
   idCommande: number;
   numeroCommande: string;
@@ -82,6 +84,7 @@ export interface Commande {
   telephoneEleveur: string | null;
   telephoneProducteur: string | null;
   statutPaiement: StatutPaiement | null;
+  operateurPaiement: OperateurPaiement | null;
   referenceFacture: string | null;
 }
 

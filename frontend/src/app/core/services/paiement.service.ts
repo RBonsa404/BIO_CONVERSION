@@ -53,6 +53,14 @@ export class PaiementService {
     );
   }
 
+  /** Paiement en espèces : le producteur confirme avoir reçu l'argent de l'éleveur. */
+  confirmerEncaissementEspeces(idCommande: number): Observable<ApiResponse<Paiement>> {
+    return this.http.post<ApiResponse<Paiement>>(
+      `${this.apiUrl}/paiements/commande/${idCommande}/especes/confirmer`,
+      {}
+    );
+  }
+
   totalPaiementsConfirmes(producteurId: number): Observable<ApiResponse<number>> {
     return this.http.get<ApiResponse<number>>(
       `${this.apiUrl}/paiements/producteur/${producteurId}/solde`
