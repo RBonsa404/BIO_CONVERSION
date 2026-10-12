@@ -94,7 +94,8 @@ const OUAGADOUGOU = { latitude: 12.3714, longitude: -1.5197 };
           }
           @for (produit of filteredProducts(); track produit.idProduit) {
             <article class="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-white p-3 shadow-sm sm:flex-nowrap">
-              <img src="/larvae-hero.webp" alt="" class="h-28 w-36 shrink-0 rounded-lg object-cover">
+              <img [src]="produit.photoUrl ?? '/larvae-hero.webp'" [alt]="produit.photoUrl ? produit.nomProduit : ''"
+                   loading="lazy" class="h-28 w-36 shrink-0 rounded-lg object-cover">
               <div class="min-w-0 flex-1">
                 <h2 class="font-serif text-xl font-semibold text-wine">{{ produit.nomExploitation }}</h2>
                 <p class="mt-1 text-sm text-text">{{ produit.nomProduit }} · {{ libelleType(produit.typeProduit) }}</p>

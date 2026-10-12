@@ -32,4 +32,7 @@ public class ProduitDto {
     private BigDecimal prix;
     private TypeProduit typeProduit;
     private boolean disponibilite;
+
+    /** Adresse de la photo du produit, ou {@code null} s'il n'en a pas. */
+    private String photoUrl;
 }

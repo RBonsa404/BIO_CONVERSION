@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MarketplaceService, Produit, ProduitRequest, TypeProduit } from '../../core/services/marketplace.service';
 import { messageErreur } from '../../core/utils/http-error';
+import { reduirePhoto } from '../../core/utils/photo';
 import { libelleTypeProduit } from '../../core/utils/statuts';
 import { PageHeaderComponent, UiBadgeComponent } from '../../shared/components';
 
@@ -61,6 +62,29 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../shared/components';
                 <input id="quantiteStock" type="number" min="0" step="0.5" formControlName="quantiteStock"
                        class="w-full rounded-xl border-2 border-line px-4 py-3 focus:border-wine focus:outline-none">
               </div>
+              <div class="md:col-span-2">
+                <label for="photo" class="mb-2 block text-sm font-semibold text-text">Photo du produit</label>
+                <div class="flex flex-wrap items-center gap-4">
+                  @if (photoApercu()) {
+                    <img [src]="photoApercu()" alt="Aperçu de la photo du produit"
+                         class="h-28 w-28 rounded-xl border border-line object-cover">
+                  } @else {
+                    <div class="flex h-28 w-28 items-center justify-center rounded-xl border-2 border-dashed border-line bg-cream px-2 text-center text-xs text-text">
+                      Pas encore de photo
+                    </div>
+                  }
+                  <div class="min-w-0 flex-1">
+                    <input id="photo" type="file" accept="image/*" (change)="choisirPhoto($event)"
+                           class="block w-full text-sm text-text file:mr-3 file:rounded-lg file:border-0 file:bg-wine file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-wine-dark">
+                    <p class="mt-2 text-xs text-text">
+                      Photo prise avec le téléphone ou choisie dans la galerie. Elle est réduite automatiquement avant l’envoi.
+                    </p>
+                    @if (photoErreur()) {
+                      <p class="mt-2 text-sm text-red-600" role="alert">{{ photoErreur() }}</p>
+                    }
+                  </div>
+                </div>
+              </div>
             </div>
             @if (form.invalid && form.touched) {
               <p class="mt-4 text-sm text-red-600" role="alert">
@@ -93,6 +117,10 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../shared/components';
           @for (produit of produits(); track produit.idProduit) {
             <article class="flex flex-col rounded-2xl border border-line bg-white p-5 shadow-sm"
                      [class.opacity-70]="!produit.disponibilite">
+              @if (produit.photoUrl) {
+                <img [src]="produit.photoUrl" [alt]="produit.nomProduit" loading="lazy"
+                     class="mb-4 h-40 w-full rounded-xl object-cover">
+              }
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                   <p class="text-sm font-semibold text-green">{{ libelleType(produit.typeProduit) }}</p>
@@ -147,6 +175,14 @@ export class ProducteurProduitsComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly actionMessage = signal('');
 
+  /** Photo affichée dans le formulaire : celle du produit, ou l'aperçu de la photo qui vient d'être choisie. */
+  readonly photoApercu = signal<string | null>(null);
+  readonly photoErreur = signal('');
+  /** Photo choisie (déjà réduite), envoyée après l'enregistrement du produit. */
+  private photoChoisie: Blob | null = null;
+  /** Adresse temporaire de l'aperçu local, à libérer quand on n'en a plus besoin. */
+  private apercuLocal: string | null = null;
+
   readonly libelleType = libelleTypeProduit;
 
   constructor(private fb: FormBuilder, private marketplaceService: MarketplaceService) {
@@ -180,6 +216,7 @@ export class ProducteurProduitsComponent implements OnInit {
   ouvrirCreation(): void {
     this.enEdition.set(null);
     this.form.reset({ nomProduit: '', typeProduit: 'LARVE', prix: null, quantiteStock: null });
+    this.reinitialiserPhoto(null);
     this.formOuvert.set(true);
     this.actionMessage.set('');
   }
@@ -192,6 +229,7 @@ export class ProducteurProduitsComponent implements OnInit {
       prix: produit.prix,
       quantiteStock: produit.quantiteStock
     });
+    this.reinitialiserPhoto(produit.photoUrl);
     this.formOuvert.set(true);
     this.actionMessage.set('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -200,6 +238,57 @@ export class ProducteurProduitsComponent implements OnInit {
   fermer(): void {
     this.formOuvert.set(false);
     this.enEdition.set(null);
+    this.reinitialiserPhoto(null);
+  }
+
+  /** Photo choisie dans le formulaire : réduite tout de suite, envoyée à l'enregistrement. */
+  async choisirPhoto(event: Event): Promise<void> {
+    const champ = event.target as HTMLInputElement;
+    const fichier = champ.files?.[0];
+    if (!fichier) {
+      return;
+    }
+    this.photoErreur.set('');
+    try {
+      const reduite = await reduirePhoto(fichier);
+      this.photoChoisie = reduite;
+      if (this.apercuLocal) {
+        URL.revokeObjectURL(this.apercuLocal);
+      }
+      this.apercuLocal = URL.createObjectURL(reduite);
+      this.photoApercu.set(this.apercuLocal);
+    } catch {
+      this.photoChoisie = null;
+      champ.value = '';
+      this.photoErreur.set('Cette image ne peut pas être lue. Choisissez une photo JPG ou PNG.');
+    }
+  }
+
+  /** Efface la photo en attente d'envoi ; photoExistante = photo déjà enregistrée à afficher, le cas échéant. */
+  private reinitialiserPhoto(photoExistante: string | null): void {
+    if (this.apercuLocal) {
+      URL.revokeObjectURL(this.apercuLocal);
+      this.apercuLocal = null;
+    }
+    this.photoChoisie = null;
+    this.photoErreur.set('');
+    this.photoApercu.set(photoExistante);
+    const champ = document.getElementById('photo') as HTMLInputElement | null;
+    if (champ) {
+      champ.value = '';
+    }
+  }
+
+  /** Met la liste à jour avec le produit enregistré et referme le formulaire. */
+  private terminer(produit: Produit, existant: Produit | null): void {
+    this.produits.update(list => existant
+      ? list.map(p => p.idProduit === existant.idProduit ? produit : p)
+      : [produit, ...list]);
+    this.actionMessage.set(existant
+      ? `« ${produit.nomProduit} » a été mis à jour.`
+      : `« ${produit.nomProduit} » est maintenant visible sur la marketplace.`);
+    this.isSaving.set(false);
+    this.fermer();
   }
 
   enregistrer(): void {
@@ -223,14 +312,22 @@ export class ProducteurProduitsComponent implements OnInit {
       : this.marketplaceService.publierProduit(requete);
     appel.subscribe({
       next: response => {
-        this.produits.update(list => existant
-          ? list.map(p => p.idProduit === existant.idProduit ? response.data : p)
-          : [response.data, ...list]);
-        this.actionMessage.set(existant
-          ? `« ${response.data.nomProduit} » a été mis à jour.`
-          : `« ${response.data.nomProduit} » est maintenant visible sur la marketplace.`);
-        this.isSaving.set(false);
-        this.fermer();
+        const photo = this.photoChoisie;
+        if (!photo) {
+          this.terminer(response.data, existant);
+          return;
+        }
+        // Le produit est enregistré : on envoie ensuite sa photo (le serveur renvoie le produit à jour).
+        this.marketplaceService.deposerPhotoProduit(response.data.idProduit, photo).subscribe({
+          next: avecPhoto => this.terminer(avecPhoto.data, existant),
+          error: error => {
+            this.terminer(response.data, existant);
+            this.actionMessage.set('');
+            this.errorMessage.set(
+              messageErreur(error, 'La photo n’a pas pu être envoyée.')
+              + ' Le produit est bien enregistré : cliquez sur « Modifier » pour renvoyer la photo.');
+          }
+        });
       },
       error: error => {
         this.errorMessage.set(messageErreur(error, 'Le produit n’a pas pu être enregistré. Réessayez.'));
