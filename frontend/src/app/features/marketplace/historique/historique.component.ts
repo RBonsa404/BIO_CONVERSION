@@ -53,7 +53,7 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../../shared/component
                   <p class="text-sm text-text">Paiement : {{ libellePaiement(commande.statutPaiement) }}</p>
                 }
               </div>
-              @if (commande.referenceFacture) {
+              @if (commande.factureDisponible) {
                 <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
                         class="mt-4 rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
                   Télécharger la facture

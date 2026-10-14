@@ -17,6 +17,32 @@ export interface StatistiquesPlateforme {
   commissionPlateforme: number;
 }
 
+/** Soldes des registres (somme de leurs lignes) et commissions espèces en attente. */
+export interface ResumeFonds {
+  soldeFonds: number;
+  soldeSequestre: number;
+  totalACollecter: number;
+  nombreACollecter: number;
+}
+
+export interface CommissionACollecter {
+  id: number;
+  commandeId: number;
+  numeroCommande: string;
+  producteurId: number;
+  nomExploitation: string;
+  telephoneProducteur: string | null;
+  montant: number;
+  dateVente: string;
+}
+
+export interface EncaissementRequest {
+  collecteur: string;
+  montant: number;
+  /** Format AAAA-MM-JJ ; aujourd'hui si absent. */
+  dateEncaissement?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -73,5 +99,18 @@ export class AdminService {
 
   statistiques(): Observable<ApiResponse<StatistiquesPlateforme>> {
     return this.http.get<ApiResponse<StatistiquesPlateforme>>(`${this.apiUrl}/statistiques`);
+  }
+
+  resumeCommissions(): Observable<ApiResponse<ResumeFonds>> {
+    return this.http.get<ApiResponse<ResumeFonds>>(`${this.apiUrl}/commissions/resume`);
+  }
+
+  commissionsACollecter(): Observable<ApiResponse<CommissionACollecter[]>> {
+    return this.http.get<ApiResponse<CommissionACollecter[]>>(`${this.apiUrl}/commissions/a-collecter`);
+  }
+
+  /** Le collecteur a récupéré la commission : elle entre dans le fonds de la plateforme. */
+  encaisserCommission(id: number, requete: EncaissementRequest): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/commissions/${id}/encaisser`, requete);
   }
 }

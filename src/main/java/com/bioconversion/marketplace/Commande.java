@@ -1,5 +1,6 @@
 package com.bioconversion.marketplace;
 
+import com.bioconversion.commission.StatutReglement;
 import com.bioconversion.paiement.Paiement;
 import com.bioconversion.utilisateur.Eleveur;
 import com.bioconversion.utilisateur.Producteur;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.domain.AbstractAggregateRoot;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -37,6 +39,11 @@ import java.util.List;
  *   <li>{@code calculerMontantTotal()} → TODO Module B — somme des sous-totaux LigneCommande</li>
  * </ul>
  * </p>
+ *
+ * <p><b>Module commission :</b> le taux et les montants (commission, net producteur) sont figés
+ * à la création ; un changement de paramètre ne touche jamais une commande existante. Les
+ * changements de statut sont publiés comme événements ({@link StatutCommandeChangeEvent}) lors
+ * de l'enregistrement par le repository, dans la même transaction.</p>
  */
 @Entity
 @Table(name = "commande",
@@ -50,7 +57,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Commande {
+public class Commande extends AbstractAggregateRoot<Commande> {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -81,6 +88,23 @@ public class Commande {
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false, length = 20)
     private StatutCommande statut = StatutCommande.EN_ATTENTE;
+
+    /** Taux de commission en vigueur à la création de la commande (ex. 0.0500). */
+    @Column(name = "taux_commission", precision = 5, scale = 4)
+    private BigDecimal tauxCommission;
+
+    /** Commission de la plateforme, payée par le producteur (F CFA entiers). */
+    @Column(name = "montant_commission", precision = 19, scale = 0)
+    private BigDecimal montantCommission;
+
+    /** Ce que reçoit le producteur : montant total - commission (F CFA entiers). */
+    @Column(name = "montant_net_producteur", precision = 19, scale = 0)
+    private BigDecimal montantNetProducteur;
+
+    /** Suivi de l'argent, séparé du statut de la commande (null tant qu'aucun paiement n'est confirmé). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statut_reglement", length = 30)
+    private StatutReglement statutReglement;
 
     /**
      * Lignes de la commande (1 → 1..*).
@@ -117,6 +141,20 @@ public class Commande {
         }
         if (statut == null) {
             statut = StatutCommande.EN_ATTENTE;
+        }
+        // Publié par le repository après l'insertion : le module commission fige alors les montants
+        registerEvent(new CommandeCreeeEvent(this));
+    }
+
+    /**
+     * Change le statut et publie l'événement correspondant (au prochain enregistrement par le repository).
+     * Remplace le setter généré par Lombok.
+     */
+    public void setStatut(StatutCommande nouveauStatut) {
+        StatutCommande ancien = this.statut;
+        this.statut = nouveauStatut;
+        if (idCommande != null && ancien != null && ancien != nouveauStatut) {
+            registerEvent(new StatutCommandeChangeEvent(this, ancien, nouveauStatut));
         }
     }
 

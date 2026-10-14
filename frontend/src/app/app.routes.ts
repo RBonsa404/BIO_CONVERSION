@@ -38,6 +38,7 @@ export const routes: Routes = [
       /* Administration */
       { path: 'admin', canActivate: [adminGuard], loadComponent: () => import('./features/admin/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
       { path: 'admin/utilisateurs', canActivate: [adminGuard], loadComponent: () => import('./features/admin/admin-utilisateurs/admin-utilisateurs.component').then(m => m.AdminUtilisateursComponent) },
+      { path: 'admin/commissions', canActivate: [adminGuard], loadComponent: () => import('./features/admin/admin-commissions/admin-commissions.component').then(m => m.AdminCommissionsComponent) },
 
       /* Tous les rôles */
       { path: 'profil', loadComponent: () => import('./features/profil/profil.component').then(m => m.ProfilComponent) }

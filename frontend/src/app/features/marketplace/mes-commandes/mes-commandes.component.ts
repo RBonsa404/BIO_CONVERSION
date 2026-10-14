@@ -140,32 +140,48 @@ import { PageHeaderComponent, UiBadgeComponent } from '../../../shared/component
                   }
                   @case ('PAYE') {
                     <p class="mb-3 text-sm text-text">Paiement {{ libellePaiement(commande.statutPaiement) | lowercase }}. Le producteur prépare l’expédition.</p>
+                    @if (commande.statutReglement === 'EN_SEQUESTRE') {
+                      <p class="mb-3 rounded-lg bg-green-soft p-3 text-sm text-green">
+                        Votre argent est gardé par BioConversion : le producteur ne sera payé qu’après votre confirmation
+                        de réception. Votre facture sera disponible à ce moment-là.
+                      </p>
+                    }
                     <div class="flex flex-wrap gap-2">
-                      <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
-                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
-                        Télécharger la facture
-                      </button>
-                      <button type="button" (click)="imprimerFacture(commande)" [disabled]="processingId() === commande.idCommande"
-                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
-                        Imprimer la facture
-                      </button>
+                      @if (commande.factureDisponible) {
+                        <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                                class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                          Télécharger la facture
+                        </button>
+                        <button type="button" (click)="imprimerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                                class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                          Imprimer la facture
+                        </button>
+                      }
                     </div>
                   }
                   @case ('EXPEDIE') {
                     <p class="mb-3 text-sm text-text">Votre commande est en route. Confirmez sa réception à l’arrivée.</p>
+                    @if (commande.statutReglement === 'EN_SEQUESTRE') {
+                      <p class="mb-3 rounded-lg bg-green-soft p-3 text-sm text-green">
+                        Votre argent est gardé par BioConversion jusqu’à votre confirmation. Sans action de votre part,
+                        la réception est confirmée automatiquement 72 heures après l’expédition.
+                      </p>
+                    }
                     <div class="flex flex-wrap gap-2">
                       <button type="button" (click)="confirmerReception(commande)" [disabled]="processingId() === commande.idCommande"
                               class="rounded-lg bg-green px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
                         Confirmer la réception
                       </button>
-                      <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
-                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
-                        Télécharger la facture
-                      </button>
-                      <button type="button" (click)="imprimerFacture(commande)" [disabled]="processingId() === commande.idCommande"
-                              class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
-                        Imprimer la facture
-                      </button>
+                      @if (commande.factureDisponible) {
+                        <button type="button" (click)="telechargerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                                class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                          Télécharger la facture
+                        </button>
+                        <button type="button" (click)="imprimerFacture(commande)" [disabled]="processingId() === commande.idCommande"
+                                class="rounded-lg border border-green bg-white px-5 py-2.5 text-sm font-semibold text-green hover:bg-green-soft disabled:opacity-50">
+                          Imprimer la facture
+                        </button>
+                      }
                     </div>
                   }
                 }
@@ -245,7 +261,7 @@ export class MesCommandesComponent implements OnInit {
     this.paiementService.simulerReponseOperateur(commande.idCommande, succes).subscribe({
       next: () => {
         this.actionMessage.set(succes
-          ? `Paiement confirmé pour la commande ${commande.numeroCommande}. Votre facture est disponible.`
+          ? `Paiement confirmé pour la commande ${commande.numeroCommande}. Votre argent est gardé jusqu’à la réception de la commande.`
           : `Le paiement de la commande ${commande.numeroCommande} a échoué. Vous pouvez réessayer.`);
         this.processingId.set(null);
         // Statut de commande, paiement et facture changent ensemble : on relit l'état serveur
