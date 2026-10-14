@@ -1,5 +1,7 @@
 package com.bioconversion.marketplace.dto;
 
+import com.bioconversion.commission.ReglesFacture;
+import com.bioconversion.commission.StatutReglement;
 import com.bioconversion.marketplace.Commande;
 import com.bioconversion.marketplace.StatutCommande;
 import com.bioconversion.paiement.Paiement;
@@ -46,6 +48,14 @@ public class CommandeDto {
     private String operateurPaiement;
     private String referenceFacture;
 
+    // Module commission : montants figés à la création et suivi de l'argent
+    private BigDecimal tauxCommission;
+    private BigDecimal montantCommission;
+    private BigDecimal montantNetProducteur;
+    private StatutReglement statutReglement;
+    /** Vrai quand la facture peut être téléchargée (règle unique : ReglesFacture). */
+    private boolean factureDisponible;
+
     public static CommandeDto fromEntity(Commande commande) {
         if (commande == null) {
             return null;
@@ -85,6 +95,11 @@ public class CommandeDto {
                 .referenceFacture(paiement != null && paiement.getFacture() != null
                         ? paiement.getFacture().getReference()
                         : null)
+                .tauxCommission(commande.getTauxCommission())
+                .montantCommission(commande.getMontantCommission())
+                .montantNetProducteur(commande.getMontantNetProducteur())
+                .statutReglement(commande.getStatutReglement())
+                .factureDisponible(ReglesFacture.factureDisponible(commande))
                 .build();
     }
 }

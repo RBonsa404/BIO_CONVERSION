@@ -107,12 +107,46 @@ type Filtre = 'actives' | 'terminees' | 'toutes';
                     }
                   }
                   @case ('PAYE') {
+                    @if (commande.statutReglement === 'EN_SEQUESTRE') {
+                      <p class="w-full rounded-lg bg-green-soft p-3 text-sm font-semibold text-green">
+                        Livrez, vous recevrez {{ commande.montantNetProducteur | number:'1.0-0' }} FCFA
+                        dès que l’éleveur aura confirmé la réception.
+                      </p>
+                    }
                     <button type="button" (click)="agir(commande, 'expedier')" [disabled]="processingId() === commande.idCommande"
                             class="rounded-lg bg-wine px-5 py-2.5 text-sm font-semibold text-white hover:bg-wine-dark disabled:opacity-50">Marquer comme expédiée</button>
                   }
                   @case ('EXPEDIE') {
-                    <button type="button" (click)="agir(commande, 'livrer')" [disabled]="processingId() === commande.idCommande"
-                            class="rounded-lg bg-wine px-5 py-2.5 text-sm font-semibold text-white hover:bg-wine-dark disabled:opacity-50">Marquer comme livrée</button>
+                    @if (commande.statutReglement === 'EN_SEQUESTRE') {
+                      <!-- Orange Money : c'est l'éleveur (ou la confirmation automatique après 72 h) qui confirme la réception -->
+                      <p class="w-full rounded-lg bg-green-soft p-3 text-sm text-green">
+                        En attente de la confirmation de réception par l’éleveur (automatique après 72 h).
+                        Vous recevrez alors {{ commande.montantNetProducteur | number:'1.0-0' }} FCFA.
+                      </p>
+                    } @else {
+                      <button type="button" (click)="agir(commande, 'livrer')" [disabled]="processingId() === commande.idCommande"
+                              class="rounded-lg bg-wine px-5 py-2.5 text-sm font-semibold text-white hover:bg-wine-dark disabled:opacity-50">Marquer comme livrée</button>
+                    }
+                  }
+                }
+                @switch (commande.statutReglement) {
+                  @case ('VERSE') {
+                    <p class="w-full text-sm font-semibold text-green">
+                      {{ commande.montantNetProducteur | number:'1.0-0' }} FCFA versés sur votre Orange Money
+                      (commission {{ commande.montantCommission | number:'1.0-0' }} FCFA).
+                    </p>
+                  }
+                  @case ('VERSEMENT_ECHOUE') {
+                    <p class="w-full text-sm text-amber-800" role="status">
+                      Le versement de {{ commande.montantNetProducteur | number:'1.0-0' }} FCFA a échoué : il sera relancé automatiquement.
+                    </p>
+                  }
+                  @case ('ENCAISSE_ESPECES') {
+                    @if ((commande.montantCommission ?? 0) > 0) {
+                      <p class="w-full text-sm text-text">
+                        Commission de {{ commande.montantCommission | number:'1.0-0' }} FCFA à remettre au collecteur BioConversion.
+                      </p>
+                    }
                   }
                 }
                 @if (factureDisponible(commande)) {
@@ -162,7 +196,7 @@ export class ProducteurCommandesComponent implements OnInit {
   }
 
   factureDisponible(commande: Commande): boolean {
-    return commande.statutPaiement === 'CONFIRME' || commande.referenceFacture !== null;
+    return commande.factureDisponible;
   }
 
   loadCommandes(): void {

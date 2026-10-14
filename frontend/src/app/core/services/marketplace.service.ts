@@ -88,7 +88,17 @@ export interface Commande {
   statutPaiement: StatutPaiement | null;
   operateurPaiement: OperateurPaiement | null;
   referenceFacture: string | null;
+  // Module commission (montants figés à la création de la commande)
+  tauxCommission: number | null;
+  montantCommission: number | null;
+  montantNetProducteur: number | null;
+  statutReglement: StatutReglement | null;
+  /** Vrai quand la facture peut être téléchargée (règle appliquée par le serveur). */
+  factureDisponible: boolean;
 }
+
+/** Suivi de l'argent d'une commande, séparé du statut de la commande. */
+export type StatutReglement = 'EN_SEQUESTRE' | 'VERSE' | 'VERSEMENT_ECHOUE' | 'REMBOURSE' | 'ENCAISSE_ESPECES';
 
 /**
  * crypto.randomUUID n'existe qu'en contexte sécurisé (HTTPS ou localhost) : sur une

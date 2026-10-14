@@ -197,6 +197,7 @@ export class SidebarLayoutComponent {
   private static readonly adminLinks: SidebarLink[] = [
     { label: 'Tableau de bord', route: '/admin', icon: 'dashboard' },
     { label: 'Utilisateurs', route: '/admin/utilisateurs', icon: 'users' },
+    { label: 'Commissions', route: '/admin/commissions', icon: 'chart' },
     { label: 'Marketplace', route: '/marketplace', icon: 'marketplace' }
   ];
 

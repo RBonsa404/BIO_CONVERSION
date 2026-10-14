@@ -1,6 +1,7 @@
 package com.bioconversion.paiement;
 
 import com.bioconversion.common.exception.BusinessException;
+import com.bioconversion.commission.ReglesFacture;
 import com.bioconversion.common.exception.ResourceNotFoundException;
 import com.bioconversion.config.AppProperties;
 import com.lowagie.text.Document;
@@ -310,6 +311,7 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
             throw new com.bioconversion.common.exception.ForbiddenException(
                     "Vous n'êtes pas autorisé à consulter cette facture");
         }
+        exigerFactureDisponible(facture.getPaiement().getCommande());
 
         return facture;
     }
@@ -339,6 +341,8 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
                     "Vous n'êtes pas autorisé à consulter cette facture");
         }
 
+        exigerFactureDisponible(paiement.getCommande());
+
         // Une facture déjà émise reste consultable même si le paiement a été remboursé depuis
         return factureRepository.findByPaiementIdPaiement(paiement.getIdPaiement())
                 .orElseGet(() -> creerEtGenererFacture(paiement));
@@ -348,6 +352,18 @@ private void ajouterLigneRecap(PdfPTable table, String label, BigDecimal montant
     @Transactional
     public byte[] telechargerPdfPourCommande(Long idCommande, Long currentUserId) {
         return lirePdf(obtenirPourCommande(idCommande, currentUserId));
+    }
+
+    /**
+     * Pas de facture avant validation : espèces, dès que le producteur a confirmé l'encaissement ;
+     * Orange Money, seulement après la réception de la commande.
+     */
+    private void exigerFactureDisponible(com.bioconversion.marketplace.Commande commande) {
+        if (!ReglesFacture.factureDisponible(commande)) {
+            throw new BusinessException(
+                    "La facture sera disponible après la validation du paiement et, pour Orange Money, "
+                            + "après la confirmation de la réception de la commande");
+        }
     }
 
     /**
