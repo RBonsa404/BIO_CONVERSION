@@ -119,6 +119,9 @@ public class SecurityConfig {
                         .hasAnyRole("PRODUCTEUR", "ADMINISTRATEUR", "SUPER_ADMINISTRATEUR")
 
                         // ── Module B — Marketplace ────────────────────────
+                        // Photos des produits : lecture publique (une balise <img> n'envoie pas le jeton).
+                        // Cette règle doit rester AVANT la règle générale /marketplace/** ci-dessous.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/marketplace/produits/*/photo").permitAll()
                         .requestMatchers("/api/v1/marketplace/**")
                         .hasAnyRole(TOUS_LES_ROLES)
 

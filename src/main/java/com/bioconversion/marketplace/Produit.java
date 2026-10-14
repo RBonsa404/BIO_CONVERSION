@@ -88,6 +88,13 @@ public class Produit {
     @Column(name = "disponibilite", nullable = false)
     private boolean disponibilite = true;
 
+    /**
+     * Date de dernière mise à jour de la photo du produit ; {@code null} = pas de photo.
+     * L'image elle-même est dans {@link ProduitPhoto}.
+     */
+    @Column(name = "photo_maj")
+    private OffsetDateTime photoMaj;
+
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

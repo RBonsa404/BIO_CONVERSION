@@ -569,7 +569,17 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .prix(produit.getPrix())
                 .typeProduit(produit.getTypeProduit())
                 .disponibilite(produit.isDisponibilite())
+                .photoUrl(photoUrl(produit))
                 .build();
+    }
+
+    /** Adresse de la photo ; ?v=... change à chaque remplacement pour contourner le cache du navigateur. */
+    private String photoUrl(Produit produit) {
+        if (produit.getPhotoMaj() == null) {
+            return null;
+        }
+        return "/api/v1/marketplace/produits/" + produit.getIdProduit()
+                + "/photo?v=" + produit.getPhotoMaj().toInstant().toEpochMilli();
     }
 
     @Override

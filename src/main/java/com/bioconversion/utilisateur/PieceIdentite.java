@@ -41,8 +41,7 @@ public class PieceIdentite {
 
     @Column(name = "nom_fichier", length = 255)
     private String nomFichier;
-
-    @Column(name = "contenu", nullable = false, length = 6_000_000)
+    @Column(name = "contenu", nullable = false, columnDefinition = "bytea")
     private byte[] contenu;
 
     @CreationTimestamp
