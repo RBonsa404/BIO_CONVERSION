@@ -59,7 +59,8 @@ import { libelleTypeProduit } from '../../../core/utils/statuts';
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               @for (produit of produits(); track produit.idProduit) {
                 <article class="grid overflow-hidden rounded-2xl border border-line bg-white shadow-sm sm:grid-cols-[180px_1fr]">
-                  <img src="/larvae-hero.webp" alt="" class="h-40 w-full object-cover sm:h-full">
+                  <img [src]="produit.photoUrl ?? '/larvae-hero.webp'" [alt]="produit.photoUrl ? produit.nomProduit : ''"
+                       loading="lazy" class="h-40 w-full object-cover sm:h-full">
                   <div class="flex flex-col p-4">
                     <p class="text-sm font-semibold text-green">{{ libelleType(produit.typeProduit) }}</p>
                     <h3 class="mt-1 font-serif text-xl font-semibold text-wine">{{ produit.nomProduit }}</h3>
@@ -97,7 +98,7 @@ export class ProducteurDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private marketplaceService: MarketplaceService,
     private authService: AuthService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const rawId = this.route.snapshot.paramMap.get('id');

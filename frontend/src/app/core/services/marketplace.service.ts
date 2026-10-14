@@ -25,6 +25,8 @@ export interface Produit {
   prix: number;
   typeProduit: TypeProduit;
   disponibilite: boolean;
+  /** Adresse de la photo, ou null si le producteur n'en a pas ajouté. */
+  photoUrl: string | null;
 }
 
 export interface ProduitRequest {
@@ -159,6 +161,16 @@ export class MarketplaceService {
 
   modifierProduit(produitId: number, produit: ProduitRequest): Observable<ApiResponse<Produit>> {
     return this.http.put<ApiResponse<Produit>>(`${this.apiUrl}/marketplace/produits/${produitId}`, produit);
+  }
+
+  /** Ajoute ou remplace la photo du produit. Renvoie le produit à jour (avec sa nouvelle photoUrl). */
+  deposerPhotoProduit(produitId: number, photo: Blob): Observable<ApiResponse<Produit>> {
+    const formulaire = new FormData();
+    formulaire.append('photo', photo, 'photo.jpg');
+    return this.http.post<ApiResponse<Produit>>(
+      `${this.apiUrl}/marketplace/produits/${produitId}/photo`,
+      formulaire
+    );
   }
 
   retirerProduit(produitId: number): Observable<ApiResponse<void>> {

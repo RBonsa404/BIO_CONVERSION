@@ -29,7 +29,8 @@ import { messageErreur } from '../../core/utils/http-error';
                 class="grid grid-cols-1 gap-5 lg:grid-cols-[1.45fr_.8fr]">
             <section class="rounded-2xl border border-line bg-white p-5 shadow-sm md:p-6">
               <div class="mb-5 flex items-center gap-4">
-                <img src="/larvae-hero.webp" alt="" class="h-24 w-28 rounded-lg object-cover">
+                <img [src]="currentProduit.photoUrl ?? '/larvae-hero.webp'" [alt]="currentProduit.photoUrl ? currentProduit.nomProduit : ''"
+                     class="h-24 w-28 rounded-lg object-cover">
                 <div>
                   <p class="text-sm text-text">{{ currentProduit.nomExploitation }}</p>
                   <h2 class="font-serif text-2xl font-semibold text-wine">{{ currentProduit.nomProduit }}</h2>
